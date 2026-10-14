@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AntiDoom</string>
+    <string name="accessibility_service_description">AntiDoom monitors scrolling gestures in infinite-feed apps (Instagram, TikTok, YouTube Shorts) to prevent overstimulation and provide mindful pauses.</string>
+    <string name="notification_channel_name">AntiDoom Background Monitor</string>
+    <string name="notification_channel_desc">Persistent notification ensuring AntiDoom scroll monitor remains active.</string>
+    <string name="notification_active_text">AntiDoom is actively protecting you from doomscrolling</string>
+    <string name="overlay_title">Reclaim Your Time</string>
+    <string name="overlay_close_app">Close App (Take a Break)</string>
+    <string name="overlay_snooze">Snooze 5 Minutes</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AntiDoom</string>
+    <string name="accessibility_service_description">AntiDoom memantau aktivitas scrolling pada aplikasi endless-feed (Instagram, TikTok, YouTube Shorts) untuk mencegah overstimulasi dan memberikan jeda sehat.</string>
+    <string name="notification_channel_name">Pemantau Latar Belakang AntiDoom</string>
+    <string name="notification_channel_desc">Notifikasi persisten untuk menjaga pemantau scroll AntiDoom tetap berjalan.</string>
+    <string name="notification_active_text">AntiDoom sedang aktif melindungi Anda dari doomscrolling</string>
+    <string name="overlay_title">Kendalikan Waktumu</string>
+    <string name="overlay_close_app">Tutup Aplikasi (Istirahat Dulu)</string>
+    <string name="overlay_snooze">Jeda 5 Menit</string>
+</resources>
