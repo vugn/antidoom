@@ -50,11 +50,14 @@ class OverlayService : Service() {
             context.startService(intent)
         }
 
-        fun updateCounter(context: Context, scrollCount: Int, language: String = "en") {
+        fun updateCounter(context: Context, scrollCount: Int, language: String = "en", appName: String? = null) {
             val intent = Intent(context, OverlayService::class.java).apply {
                 action = ACTION_UPDATE_COUNTER
                 putExtra(EXTRA_SCROLL_COUNT, scrollCount)
                 putExtra(EXTRA_LANGUAGE, language)
+                if (appName != null) {
+                    putExtra(EXTRA_APP_NAME, appName)
+                }
             }
             context.startService(intent)
         }
@@ -111,6 +114,9 @@ class OverlayService : Service() {
             }
             ACTION_UPDATE_COUNTER -> {
                 currentScrollCount = intent.getIntExtra(EXTRA_SCROLL_COUNT, currentScrollCount)
+                intent.getStringExtra(EXTRA_APP_NAME)?.let {
+                    currentAppName = it
+                }
                 updateFloatingCounterText()
             }
             ACTION_HIDE_COUNTER -> {
@@ -192,7 +198,8 @@ class OverlayService : Service() {
             id = View.generateViewId()
             setTextColor(Color.parseColor("#F5F6FA"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            text = "⚡ $currentScrollCount scrolls • $currentAppName"
+            val unit = if (currentLanguage == "id") "scroll" else "scrolls"
+            text = "⚡ $currentScrollCount $unit • AntiDoom"
         }
 
         pillLayout.addView(dotView)
@@ -243,11 +250,15 @@ class OverlayService : Service() {
     }
 
     private fun updateFloatingCounterText() {
+        if (counterView == null) {
+            createOrUpdateFloatingCounter()
+            return
+        }
         counterView?.let { view ->
             if (view is LinearLayout && view.childCount >= 2) {
                 val tv = view.getChildAt(1) as? TextView
                 val unit = if (currentLanguage == "id") "scroll" else "scrolls"
-                tv?.text = "⚡ $currentScrollCount $unit • $currentAppName"
+                tv?.text = "⚡ $currentScrollCount $unit • AntiDoom"
             }
         }
     }
