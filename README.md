@@ -42,6 +42,14 @@ Store-ready graphics live in [`docs/store/`](docs/store): five 1080×1920 phone 
 
 ---
 
+## 🌐 Website
+
+The website lives in its own repository: **[vugn/antidoom-web](https://github.com/vugn/antidoom-web)** → **<https://antidoom.app>**
+
+It is a dependency-free static site (HTML/CSS/JS, no build step), multilingual (`/en/` and `/id/`) with a home page, a how-it-works page, the privacy policy and an about page. Deploy on push to `main` via GitHub Pages. Screenshot and brand assets used by the site are copied from `docs/store/` and `brand/` in this repo.
+
+---
+
 ## ✨ Features
 
 1. **🧠 Counts videos, not scroll events**:
