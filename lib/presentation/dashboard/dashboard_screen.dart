@@ -10,6 +10,7 @@ import '../onboarding/onboarding_screen.dart';
 import '../providers/app_state_provider.dart';
 import '../settings/blocklist_screen.dart';
 import '../widgets/glass_widgets.dart';
+import '../widgets/brand.dart';
 
 /// Home: one ring (swipes in a row vs. the limit), one switch, today's numbers.
 class DashboardScreen extends ConsumerWidget {
@@ -366,11 +367,11 @@ class DashboardScreen extends ConsumerWidget {
               left: 0,
               right: 0,
               child: FloatingTopBar(
-                title: Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Text(
-                    'AntiDoom',
-                    style: AppTheme.display(size: 22, color: p.text),
+                title: const Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: BrandWordmark(height: 21),
                   ),
                 ),
                 actions: [

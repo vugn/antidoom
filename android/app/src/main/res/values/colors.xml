@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#0A6F52</color>
+    <!-- AntiDoom "Look Up" brand colours (see brand/README.md) -->
+    <color name="ic_launcher_background">#12B76A</color>
+    <color name="brand_green">#12B76A</color>
+    <color name="splash_background">#F5F5F2</color>
 </resources>

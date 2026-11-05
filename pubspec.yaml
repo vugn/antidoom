@@ -69,6 +69,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/apps/
+    - assets/brand/
     - LICENSE
     - assets/fonts/inter/OFL.txt
     - assets/fonts/intertight/OFL.txt

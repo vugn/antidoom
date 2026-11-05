@@ -132,8 +132,10 @@ antidoom/
 │   │   └── overlay_preview/                        # Break-screen preview
 │   └── services/
 │       └── native_bridge.dart                      # Dart MethodChannel wrapper
+├── brand/                                          # Logo kit: SVG masters, PNGs, guidelines, generator
 ├── assets/
-│   ├── images/                                     # App logo, social app logos, graphics
+│   ├── brand/                                      # Logo SVGs used in the app
+│   ├── images/apps/                                # Social app logos
 │   └── fonts/                                      # Inter & Inter Tight (OFL 1.1)
 ├── docs/
 │   ├── tracking.md                                 # How AntiDoom counts videos
@@ -178,7 +180,7 @@ To reset onboarding on a device: `adb shell pm clear com.antidoom`.
 - **Theme**: neutral, high-contrast palette with a single green accent. Light and dark mode follow the system setting.
 - **Typography**: Inter (text) and Inter Tight (numbers & titles), bundled in `assets/fonts/` under the SIL Open Font License 1.1. Nothing is downloaded at runtime, so the release build needs no internet permission.
 - **Glass effects**: [`liquid_glass_easy`](https://pub.dev/packages/liquid_glass_easy) for pinned controls.
-- **Logo & icons**: available in several formats in `antidoom-logo/` and `assets/images/`.
+- **Logo ("Look Up")**: the *oo* in *doom* are eyes glancing up. The opposite of doomscrolling is looking up. Every logo file, the colours and the usage rules are in [`brand/`](brand/README.md); `brand/source/build_brand.py` generates the logo files and every Android icon from one source.
 
 ---
 

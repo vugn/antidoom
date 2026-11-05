@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:antidoom/main.dart';
+import 'package:antidoom/presentation/widgets/brand.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Pump a fixed amount of time, letting async prefs writes complete.
@@ -41,7 +42,7 @@ void main() {
     );
     await settle(tester);
 
-    expect(find.text('AntiDoom'), findsOneWidget);
+    expect(find.byType(BrandWordmark), findsOneWidget);
     expect(find.text('Protection is off'), findsOneWidget);
     expect(find.text('Swipes today'), findsOneWidget);
 

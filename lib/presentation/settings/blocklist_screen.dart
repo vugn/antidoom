@@ -14,6 +14,7 @@ import '../overlay_preview/overlay_preview_dialog.dart';
 import '../../services/native_bridge.dart';
 import '../providers/app_state_provider.dart';
 import '../widgets/glass_widgets.dart';
+import '../widgets/brand.dart';
 import '../widgets/language_selector_sheet.dart';
 
 /// Settings: limit, apps, and everything else, on one page.
@@ -246,6 +247,10 @@ class BlocklistScreen extends ConsumerWidget {
                         onTap: () => showLicensePage(
                           context: context,
                           applicationName: AppConstants.appName,
+                          applicationIcon: const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: BrandSymbol(size: 64, icon: true),
+                          ),
                           applicationLegalese:
                               '${AppConstants.copyright}\n${s.openSourceDesc(AppConstants.license)}',
                         ),

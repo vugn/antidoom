@@ -10,6 +10,7 @@ import '../../core/theme/app_theme.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../providers/app_state_provider.dart';
 import '../widgets/glass_widgets.dart';
+import '../widgets/brand.dart';
 import 'onboarding_screen.dart';
 
 enum _StopMode { checkIn, block }
@@ -209,6 +210,7 @@ class _SetupFlowState extends ConsumerState<SetupFlow> with WidgetsBindingObserv
     void pick(String c) => ref.read(localeProvider.notifier).setLocale(Locale(c));
 
     return _Page(
+      leading: const BrandWordmark(height: 30),
       step: s.stepOf(1, _pages),
       title: s.obLangTitle,
       desc: s.obLangDesc,
@@ -413,6 +415,7 @@ class _Page extends StatelessWidget {
   final String desc;
   final Widget child;
   final bool padded;
+  final Widget? leading;
 
   const _Page({
     required this.step,
@@ -420,6 +423,7 @@ class _Page extends StatelessWidget {
     required this.desc,
     required this.child,
     this.padded = true,
+    this.leading,
   });
 
   @override
@@ -434,6 +438,7 @@ class _Page extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (leading != null) ...[leading!, const SizedBox(height: 28)],
               Text(
                 step.toUpperCase(),
                 style: TextStyle(
