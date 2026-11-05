@@ -24,6 +24,11 @@ abstract class AppLocalizations {
 
   // Header
   String get headerTagline;
+  String get headlineActive;
+  String get headlinePaused;
+  String get dailyScrollLog;
+  String get todaySummary;
+  String get tabMore;
 
   // Master switch
   String get masterActiveTitle;
@@ -53,7 +58,7 @@ abstract class AppLocalizations {
   // Daily Breakdown Card
   String get todayActivityTitle;
   String appsMonitoredCount(int count);
-  String scrollLimitProgress(int current, int limit);
+  String scrollsCounted(int count);
 
   // Quick Action Buttons
   String get targetAppsBtn;
@@ -63,8 +68,11 @@ abstract class AppLocalizations {
   String get blocklistScreenTitle;
   String get blocklistHeading;
   String get blocklistSubtitle;
-  String get scrollLimitSliderLabel;
-  String scrollLimitValue(int count);
+  String get stopAtSlideTitle;
+  String get stopAtSlideSubtitle;
+  String stopAtSlideValue(int count);
+  String get decreaseLimit;
+  String get increaseLimit;
   String get privacyFirstTitle;
   String get privacyFirstDesc;
 
@@ -140,6 +148,21 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get headerTagline => 'Break the Loop • Reclaim Time';
 
+@override
+String get headlineActive => 'Stay present.\nYou\'re protected.';
+
+@override
+String get headlinePaused => 'Ready to take\nyour time back?';
+
+@override
+String get dailyScrollLog => 'Daily scroll log';
+
+@override
+String get todaySummary => 'Today\'s summary';
+
+@override
+String get tabMore => 'More';
+
   @override
   String get masterActiveTitle => 'AntiDoom Protection Active 🛡️';
 
@@ -199,8 +222,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String appsMonitoredCount(int count) => '$count monitored';
 
   @override
-  String scrollLimitProgress(int current, int limit) =>
-      '$current / $limit scrolls';
+  String scrollsCounted(int count) => '$count scrolls';
 
   @override
   String get targetAppsBtn => 'Target Apps';
@@ -216,13 +238,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get blocklistSubtitle =>
-      'Choose which feed apps to track and configure scroll limits before an intervention overlay triggers.';
+      'Choose which feed apps to track. One unified overlay protects all of them at once - the stop limit applies across every social media app.';
 
   @override
-  String get scrollLimitSliderLabel => 'Scroll Limit (Swipes)';
+  String get stopAtSlideTitle => 'Stop Doom Scroll At';
 
   @override
-  String scrollLimitValue(int count) => '$count scrolls';
+  String get stopAtSlideSubtitle =>
+      'One limit for all social media. The overlay appears once you reach this slide number, wherever you scroll.';
+
+  @override
+  String stopAtSlideValue(int count) => 'Slide #$count';
+
+  @override
+  String get decreaseLimit => 'Decrease limit';
+
+  @override
+  String get increaseLimit => 'Increase limit';
 
   @override
   String get privacyFirstTitle => '100% Privacy-First & Offline';
@@ -243,24 +275,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'AntiDoom is 100% open-source & processes all telemetry strictly on your device without remote servers. To monitor feeds and present mindful overlays, please enable the 3 permissions below:';
 
   @override
-  String get permAccessibilityTitle =>
-      '1. Accessibility Service';
+  String get permAccessibilityTitle => '1. Accessibility Service';
 
   @override
   String get permAccessibilityDesc =>
       'Detects when you open Reels/TikTok/Shorts and measures real-time scroll counts.';
 
   @override
-  String get permOverlayTitle =>
-      '2. Display Over Other Apps (Overlay)';
+  String get permOverlayTitle => '2. Display Over Other Apps (Overlay)';
 
   @override
   String get permOverlayDesc =>
       'Displays the floating scroll counter bubble and the full-screen mindful break interceptor.';
 
   @override
-  String get permBatteryTitle =>
-      '3. Disable Battery Optimization';
+  String get permBatteryTitle => '3. Disable Battery Optimization';
 
   @override
   String get permBatteryDesc =>
@@ -301,13 +330,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   List<String> get affirmations => const [
-        'That\'s enough scrolling for now. Give your eyes a rest and take a deep breath.',
-        'The real world holds infinitely more meaning than an endless algorithmic feed.',
-        'Master your thumb; don\'t let algorithms dictate your focus and your day.',
-        'One deep, conscious breath is worth more than a hundred short videos.',
-        'The time you reclaim right now is fuel for your real-world dreams.',
-        'You are in control. Put the phone down and reconnect with the present.',
-      ];
+    'That\'s enough scrolling for now. Give your eyes a rest and take a deep breath.',
+    'The real world holds infinitely more meaning than an endless algorithmic feed.',
+    'Master your thumb; don\'t let algorithms dictate your focus and your day.',
+    'One deep, conscious breath is worth more than a hundred short videos.',
+    'The time you reclaim right now is fuel for your real-world dreams.',
+    'You are in control. Put the phone down and reconnect with the present.',
+  ];
 }
 
 /// Indonesian Implementation
@@ -350,6 +379,21 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get headerTagline => 'Break the Loop • Reclaim Time';
+
+@override
+String get headlineActive => 'Tetap hadir.\nKamu terlindungi.';
+
+@override
+String get headlinePaused => 'Siap ambil lagi\nwaktumu?';
+
+@override
+String get dailyScrollLog => 'Log scroll harian';
+
+@override
+String get todaySummary => 'Ringkasan hari ini';
+
+@override
+String get tabMore => 'Lainnya';
 
   @override
   String get masterActiveTitle => 'Proteksi AntiDoom Aktif 🛡️';
@@ -410,8 +454,7 @@ class AppLocalizationsId extends AppLocalizations {
   String appsMonitoredCount(int count) => '$count dipantau';
 
   @override
-  String scrollLimitProgress(int current, int limit) =>
-      '$current / $limit scroll';
+  String scrollsCounted(int count) => '$count scroll';
 
   @override
   String get targetAppsBtn => 'Atur Target App';
@@ -427,13 +470,23 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get blocklistSubtitle =>
-      'Pilih aplikasi feed yang ingin dipantau dan tentukan batas scroll sebelum intervensi muncul.';
+      'Pilih aplikasi feed yang ingin dipantau. Satu overlay menyatukan semuanya - batasnya berlaku di semua sosmed.';
 
   @override
-  String get scrollLimitSliderLabel => 'Batas Scroll (Swipes)';
+  String get stopAtSlideTitle => 'Stop Doom Scroll Di';
 
   @override
-  String scrollLimitValue(int count) => '$count scroll';
+  String get stopAtSlideSubtitle =>
+      'Satu batasan untuk semua sosmed. Overlay muncul saat kamu mencapai slide ke angka ini, di aplikasi apa pun.';
+
+  @override
+  String stopAtSlideValue(int count) => 'Slide ke-$count';
+
+  @override
+  String get decreaseLimit => 'Kurangi batas';
+
+  @override
+  String get increaseLimit => 'Tambah batas';
 
   @override
   String get privacyFirstTitle => '100% Privacy-First & Offline';
@@ -462,16 +515,14 @@ class AppLocalizationsId extends AppLocalizations {
       'Mendeteksi saat membuka Reels/TikTok/Shorts dan menghitung jumlah scrolling.';
 
   @override
-  String get permOverlayTitle =>
-      '2. Tampilan di Atas Aplikasi Lain (Overlay)';
+  String get permOverlayTitle => '2. Tampilan di Atas Aplikasi Lain (Overlay)';
 
   @override
   String get permOverlayDesc =>
       'Menampilkan floating scrolling counter dan layer intervensi lembut saat batas tercapai.';
 
   @override
-  String get permBatteryTitle =>
-      '3. Nonaktifkan Optimasi Baterai';
+  String get permBatteryTitle => '3. Nonaktifkan Optimasi Baterai';
 
   @override
   String get permBatteryDesc =>
@@ -512,18 +563,17 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   List<String> get affirmations => const [
-        'Udah cukup ya, mata lu butuh istirahat. Tarik napas dulu.',
-        'Dunia nyata jauh lebih berharga daripada endless scrolling.',
-        'Kendalikan jempolmu, jangan biarkan algoritma mendikte harimu.',
-        'Satu napas dalam bernilai lebih dari 100 video singkat.',
-        'Waktu yang kamu hemat sekarang adalah energi untuk mimpimu.',
-        'Kamu yang memegang kendali. Letakkan ponsel dan istirahatkan pikiranmu.',
-      ];
+    'Udah cukup ya, mata lu butuh istirahat. Tarik napas dulu.',
+    'Dunia nyata jauh lebih berharga daripada endless scrolling.',
+    'Kendalikan jempolmu, jangan biarkan algoritma mendikte harimu.',
+    'Satu napas dalam bernilai lebih dari 100 video singkat.',
+    'Waktu yang kamu hemat sekarang adalah energi untuk mimpimu.',
+    'Kamu yang memegang kendali. Letakkan ponsel dan istirahatkan pikiranmu.',
+  ];
 }
 
 /// Flutter Localizations Delegate
-class AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const AppLocalizationsDelegate();
 
   @override

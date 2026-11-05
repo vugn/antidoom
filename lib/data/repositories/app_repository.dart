@@ -10,6 +10,39 @@ class AppRepository {
   static const _keyStatsToday = 'antidoom_stats_today';
   static const _keyLastDate = 'antidoom_last_date';
   static const _keyLanguage = 'antidoom_language_code';
+  static const _keyScrollStopLimit = 'antidoom_scroll_stop_limit';
+  static const _keyWarnEnabled = 'antidoom_warn_enabled';
+  static const _keyForceBlockAt = 'antidoom_force_block_at';
+  static const _keyWarnEvery = 'antidoom_warn_every';
+
+  Future<int> getWarnEvery() async =>
+      (await SharedPreferences.getInstance()).getInt(_keyWarnEvery) ?? 100;
+
+  Future<void> setWarnEvery(int v) async =>
+      (await SharedPreferences.getInstance()).setInt(_keyWarnEvery, v);
+
+  Future<bool> getWarnEnabled() async =>
+      (await SharedPreferences.getInstance()).getBool(_keyWarnEnabled) ?? true;
+
+  Future<void> setWarnEnabled(bool v) async =>
+      (await SharedPreferences.getInstance()).setBool(_keyWarnEnabled, v);
+
+  Future<int> getForceBlockAt() async =>
+      (await SharedPreferences.getInstance()).getInt(_keyForceBlockAt) ?? 0;
+
+  Future<void> setForceBlockAt(int v) async =>
+      (await SharedPreferences.getInstance()).setInt(_keyForceBlockAt, v);
+
+  Future<int> getScrollStopLimit() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyScrollStopLimit) ??
+        AppConstants.defaultScrollStopLimit;
+  }
+
+  Future<void> setScrollStopLimit(int limit) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyScrollStopLimit, limit);
+  }
 
   Future<String> getLanguageCode() async {
     final prefs = await SharedPreferences.getInstance();
@@ -38,7 +71,9 @@ class AppRepository {
     if (jsonString != null && jsonString.isNotEmpty) {
       try {
         final List list = jsonDecode(jsonString) as List;
-        return list.map((e) => AppRule.fromJson(e as Map<String, dynamic>)).toList();
+        return list
+            .map((e) => AppRule.fromJson(e as Map<String, dynamic>))
+            .toList();
       } catch (_) {}
     }
 
@@ -89,8 +124,10 @@ class AppRepository {
     final savedJson = prefs.getString(_keyStatsToday);
     if (savedJson != null) {
       try {
-        final Map<String, dynamic> data = jsonDecode(savedJson) as Map<String, dynamic>;
-        final perApp = (data['perAppScrolls'] as Map<String, dynamic>?)?.map(
+        final Map<String, dynamic> data =
+            jsonDecode(savedJson) as Map<String, dynamic>;
+        final perApp =
+            (data['perAppScrolls'] as Map<String, dynamic>?)?.map(
               (k, v) => MapEntry(k, v as int),
             ) ??
             {};
@@ -99,7 +136,10 @@ class AppRepository {
           todaySavedMinutes: data['todaySavedMinutes'] as int? ?? 0,
           todayInterventions: data['todayInterventions'] as int? ?? 0,
           perAppScrolls: perApp,
-          weeklyScrollHistory: (data['weeklyScrollHistory'] as List?)?.map((e) => e as int).toList() ??
+          weeklyScrollHistory:
+              (data['weeklyScrollHistory'] as List?)
+                  ?.map((e) => e as int)
+                  .toList() ??
               const [140, 110, 85, 95, 60, 45, 20],
         );
       } catch (_) {}

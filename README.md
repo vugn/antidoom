@@ -1,12 +1,11 @@
-# 🛡️ AntiDoom
-
 <p align="center">
-  <img src="assets/images/app_logo.png" alt="AntiDoom Logo" width="128" height="128" />
+  <img src="docs/images/banner.png" alt="AntiDoom — Count videos, not scrolls. Break the doomscroll loop on Reels, Shorts & TikTok." width="100%" />
 </p>
 
+<h1 align="center">AntiDoom</h1>
+
 <p align="center">
-  <strong>Reclaim Your Time. Break the Loop.</strong><br>
-  <em>(Kendalikan Waktumu. Putuskan Lingkaran Scroll.)</em>
+  <strong>Reclaim Your Time. Break the Loop.</strong>
 </p>
 
 <p align="center">
@@ -19,142 +18,176 @@
 
 ---
 
-## 🌟 Tentang AntiDoom
+## 🌟 About AntiDoom
 
-**AntiDoom** adalah aplikasi *open-source*, *privacy-first*, dan *offline-ready* untuk Android yang dirancang khusus untuk memutus kebiasaan *doomscrolling* (Reels, TikTok, YouTube Shorts, X/Twitter). 
+**AntiDoom** is an *open-source*, *privacy-first*, *offline* Android app built to break the *doomscrolling* habit in short-video feeds: Instagram Reels, TikTok, YouTube Shorts, Facebook Reels and X/Twitter.
 
-Berbeda dengan aplikasi komersial yang berbayar dan tertutup (*closed-source*), AntiDoom memproses seluruh data langsung di perangkat Anda tanpa server eksternal, tanpa analitik pelacak, dan 100% transparan.
+Unlike paid, closed-source alternatives, AntiDoom processes everything on your device. It has no servers and no tracking analytics, and all of its code is public.
 
-Selain memberikan intervensi jeda, AntiDoom juga memiliki fitur **Floating Scrolling Counter Overlay** yang menempel secara elegan di atas aplikasi feed untuk memberi Anda kesadaran (*mindfulness*) langsung berapa kali Anda telah menggeser layar.
-
----
-
-## ✨ Fitur Utama (MVP)
-
-1. **⚡ Floating Scrolling Counter (Overlay di Atas)**:
-   - Gelembung mini melayang (*floating pill*) yang dapat digeser (*draggable*) di atas aplikasi media sosial.
-   - Menghitung jumlah swipe/scroll secara langsung secara *real-time* (`⚡ 42 scrolls • Instagram`).
-2. **🛡️ The Interceptor (Full-screen Zen Blocker)**:
-   - Muncul secara halus saat batas scrolling atau durasi tercapai (contoh: 50x swipe atau 15 menit).
-   - Menampilkan afirmasi menenangkan: *"Udah cukup ya, mata lu butuh istirahat. Tarik napas dulu."*
-   - Dilengkapi tombol cepat: **Tutup Aplikasi (Kembali ke Home)** atau **Jeda 5 Menit (Snooze)**.
-3. **📊 Daily Dashboard & Analytics**:
-   - Total scrolling terpantau hari ini, estimasi waktu yang berhasil diselamatkan, serta frekuensi intervensi.
-   - Grafik distribusi penggunaan per aplikasi dan histori 7 hari.
-4. **⚙️ Customizable Rules**:
-   - Atur batas scroll (*swipes threshold*) dan batas durasi per target aplikasi (Instagram, TikTok, YouTube Shorts, X/Twitter, Facebook).
-5. **🔒 100% Privacy-First & Offline**:
-   - Tidak pernah membaca konten postingan, DM/chat, atau input teks.
-   - Hanya menghitung event scroll dan nama package target aplikasi.
+Besides stepping in with breaks, AntiDoom shows a **floating counter** on top of the feed, so you always know how many videos you've watched today.
 
 ---
 
-## 🏗️ Arsitektur Sistem
+## 📸 Screenshots
+
+<p align="center">
+  <img src="docs/store/screenshot-1-counter.png" alt="Floating brain counter on a short-video feed" width="19%" />
+  <img src="docs/store/screenshot-2-checkin.png" alt="Check-in screen: stop here, keep going, or snooze" width="19%" />
+  <img src="docs/store/screenshot-3-dashboard.png" alt="Daily dashboard" width="19%" />
+  <img src="docs/store/screenshot-4-rules.png" alt="Settings: check-ins, hard block and apps to watch" width="19%" />
+  <img src="docs/store/screenshot-5-privacy.png" alt="Private, offline, open source" width="19%" />
+</p>
+
+Store-ready graphics live in [`docs/store/`](docs/store): five 1080×1920 phone screenshots and a 1024×500 Play Store feature graphic. Third-party video content in the screenshots is blurred.
+
+---
+
+## ✨ Features
+
+1. **🧠 Counts videos, not scroll events**:
+   - AntiDoom recognises *which video* is on screen from a fingerprint of the creator name and caption, and counts **distinct videos**.
+   - Swipes that bounce back, comment scrolling and quick flicks past a video (< 750 ms) are not counted. Scrolling back to a video you already saw doesn't count it again.
+   - Full details: [docs/tracking.md](docs/tracking.md).
+2. **⚡ Floating counter**:
+   - A small draggable pill at the top centre of the screen, with a brain whose expression changes with today's count (calm → tired → fried).
+3. **🛡️ Check-ins & hard block**:
+   - **Check-in** every N videos (default 100): keep going, stop, or *snooze* until tomorrow.
+   - Optional **hard block** at a number you type in yourself: feeds stay locked until tomorrow.
+4. **📊 Daily dashboard**: today's total, number of breaks, and a per-app breakdown.
+5. **🚀 Onboarding**: language (EN/ID) → apps to watch → check-in or block mode → permissions.
+6. **🔒 Privacy-first & offline**:
+   - Everything runs on the phone: no servers, no analytics, and the release build doesn't even request internet access.
+   - Visible text in video feeds (creator name and caption) is read only to build the fingerprint. Only a **hash** is stored, never the text. DMs, chats and typed text are never read.
+
+---
+
+## 🏗️ Architecture
 
 ```text
 [ Android OS ]
       │
-      ├──> [ Accessibility Service ] (Kotlin) ──> Deteksi App Aktif & Scroll Event
+      ├──> [ Accessibility Service ] (Kotlin) ──> Feed detection & video fingerprints (ReelDetector)
       │
-      ├──> [ Foreground Service ] (Kotlin) ────> Menjaga service tetap aktif di latar belakang
+      ├──> [ Accessibility Overlay ] (Kotlin) ──> Floating counter & check-in / block screen
       │
-      └──> [ Window Manager ] (Kotlin) ────────> Floating Counter & Zen Interceptor Overlay
+      ├──> [ Foreground Service ] (Kotlin) ────> Keeps tracking alive in the background
+      │
+      └──> [ TrackerPrefs ] (Kotlin) ──────────> Daily counts & config (source of truth)
                 │
                 ▼
 [ Flutter Engine ] <──(MethodChannel: com.antidoom/native)──> [ Native Bridge ]
       │
-      ├──> [ UI Dashboard & Settings ] (Flutter Widgets + Google Fonts)
-      └──> [ State Management ] (Riverpod) & Local Storage
+      ├──> [ Dashboard, Settings & Onboarding UI ] (Flutter widgets)
+      └──> [ State Management ] (Riverpod) & local storage
 ```
 
 ---
 
-## 📱 Izin Sistem Android (Permissions)
+## 📱 Android Permissions
 
-AntiDoom membutuhkan izin tingkat sistem berikut yang dipandu langsung melalui layar Onboarding:
+AntiDoom only asks for what it needs. The onboarding screens walk you through accessibility and battery; there is no "display over other apps" or usage-access permission, because the overlays are drawn by the accessibility service.
 
-| Izin | Kegunaan |
+| Permission | Purpose |
 | :--- | :--- |
-| **`BIND_ACCESSIBILITY_SERVICE`** | Mendeteksi package aplikasi feed dan pergerakan scroll. |
-| **`SYSTEM_ALERT_WINDOW`** | Menampilkan *floating counter pill* dan full-screen interceptor di atas aplikasi lain. |
-| **`FOREGROUND_SERVICE` & `SPECIAL_USE`** | Memastikan pemantau tidak dimatikan paksa oleh sistem Android 14+. |
-| **`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`** | Menghindari *aggressive task killer* OEM (Xiaomi, Oppo, Vivo, Samsung). |
+| **`BIND_ACCESSIBILITY_SERVICE`** | Detects short-video feeds, reads visible text for video fingerprints, and draws the overlays. |
+| **`FOREGROUND_SERVICE` & `SPECIAL_USE`** | Keeps the tracker from being killed by Android 14+. |
+| **`POST_NOTIFICATIONS`** | Shows the ongoing notification for the foreground service. |
+| **`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`** | Avoids aggressive OEM task killers (Xiaomi, Oppo, Vivo, Samsung). |
 
 ---
 
-## 📁 Struktur Direktori
+## 📁 Project Structure
 
 ```text
 antidoom/
 ├── android/
 │   └── app/src/main/
 │       ├── kotlin/com/antidoom/
-│       │   ├── MainActivity.kt               # MethodChannel Handler & Bridge
+│       │   ├── MainActivity.kt                     # MethodChannel handler & bridge
 │       │   ├── services/
-│       │   │   ├── AntiDoomAccessibilityService.kt # Pelacak scroll & package
-│       │   │   ├── AntiDoomForegroundService.kt    # Service persisten background
-│       │   │   └── OverlayService.kt               # Floating counter & interceptor
+│       │   │   ├── AntiDoomAccessibilityService.kt # Screen-read scheduling, counting rules, check-in/block
+│       │   │   ├── ReelDetector.kt                 # Per-app video fingerprints
+│       │   │   ├── AntiDoomForegroundService.kt    # Persistent background service
+│       │   │   ├── OverlayService.kt               # Floating counter & check-in/block screen
+│       │   │   └── BrainView.kt                    # Brain drawing in the floating counter
 │       │   └── utils/
-│       │       └── PermissionHelper.kt       # Pengecekan & pembuka izin sistem
+│       │       ├── TrackerPrefs.kt                 # Config, daily stats, video history (hashed)
+│       │       └── PermissionHelper.kt             # System permission checks & shortcuts
 │       └── AndroidManifest.xml
 ├── lib/
-│   ├── main.dart                             # Entry point Flutter
+│   ├── main.dart                                   # Flutter entry point
 │   ├── core/
-│   │   ├── theme/                            # Design system (Zen Green, Dark AMOLED)
-│   │   └── constants/                        # Konstanta & target aplikasi
+│   │   ├── theme/                                  # Palette & typography (light/dark)
+│   │   ├── localization/                           # English & Indonesian copy
+│   │   └── constants/                              # Constants, supported apps, links
 │   ├── data/
-│   │   ├── models/                           # AppRule & ScrollStat
-│   │   └── repositories/                     # Penyimpanan lokal (Preferences)
+│   │   ├── models/                                 # Data models
+│   │   └── repositories/                           # Local storage (preferences)
 │   ├── presentation/
-│   │   ├── providers/                        # Riverpod Notifier & State
-│   │   ├── onboarding/                       # Panduan aktivasi izin sistem
-│   │   ├── dashboard/                        # Layar utama dashboard & floating widget
-│   │   ├── settings/                         # Konfigurasi batas scroll per aplikasi
-│   │   └── overlay_preview/                  # Dialog preview & simulasi intervensi
+│   │   ├── providers/                              # Riverpod notifiers & state
+│   │   ├── onboarding/                             # First-run setup & permissions
+│   │   ├── dashboard/                              # Home screen
+│   │   ├── settings/                               # Limits, apps, language, about
+│   │   ├── widgets/                                # Shared UI components
+│   │   └── overlay_preview/                        # Break-screen preview
 │   └── services/
-│       └── native_bridge.dart                # MethodChannel Wrapper Dart
+│       └── native_bridge.dart                      # Dart MethodChannel wrapper
 ├── assets/
-│   └── images/                               # Logo, splash mark, dan aset grafis
+│   ├── images/                                     # App logo, social app logos, graphics
+│   └── fonts/                                      # Inter & Inter Tight (OFL 1.1)
+├── docs/
+│   ├── tracking.md                                 # How AntiDoom counts videos
+│   ├── images/banner.png                           # README banner
+│   └── store/                                      # Store screenshots & feature graphic
+├── LICENSE                                         # MIT
 └── pubspec.yaml
 ```
 
 ---
 
-## 🚀 Menjalankan Project
+## 🚀 Getting Started
 
-### Prasyarat
+### Requirements
 - Flutter SDK 3.x+ (Dart 3.x+)
-- Android SDK (Target API 34+ / Android 14)
-- Android Device fisik atau Emulator dengan Google Play Services
+- Android SDK (target API 34+ / Android 14)
+- A physical Android device or an emulator with Google Play Services
 
-### Langkah Instalasi
+### Setup
 ```bash
-# Clone repository
-git clone https://github.com/your-username/antidoom.git
+# Clone the repository
+git clone https://github.com/vugn/antidoom.git
 cd antidoom
 
 # Install dependencies
 flutter pub get
 
-# Jalankan analyzer & test
+# Run the analyzer & tests
 flutter analyze
 flutter test
 
-# Jalankan ke device
+# Run on a device
 flutter run
 ```
 
----
-
-## 🎨 Design System & Branding
-
-- **Tema Utama**: Dark AMOLED (`#121212`) untuk mengurangi kelelahan mata.
-- **Warna Aksen**: Zen Green (`#27AE60`), Soft Amber (`#F39C12`), Coral Red (`#E74C3C`).
-- **Tipografi**: Plus Jakarta Sans / Inter via Google Fonts.
-- **Logo & Ikon**: Tersedia dalam berbagai format di `antidoom-logo/` dan `assets/images/`.
+To reset onboarding on a device: `adb shell pm clear com.antidoom`.
 
 ---
 
-## 📜 Lisensi & Kontribusi
+## 🎨 Design & Branding
 
-Project ini dirilis di bawah lisensi open-source **MIT**. Kontribusi berupa saran, pelaporan bug, dan Pull Request sangat kami sambut!
+- **Theme**: neutral, high-contrast palette with a single green accent. Light and dark mode follow the system setting.
+- **Typography**: Inter (text) and Inter Tight (numbers & titles), bundled in `assets/fonts/` under the SIL Open Font License 1.1. Nothing is downloaded at runtime, so the release build needs no internet permission.
+- **Glass effects**: [`liquid_glass_easy`](https://pub.dev/packages/liquid_glass_easy) for pinned controls.
+- **Logo & icons**: available in several formats in `antidoom-logo/` and `assets/images/`.
+
+---
+
+## 📜 License & Contributing
+
+**AntiDoom** is made by [vugn](https://github.com/vugn). Source code: <https://github.com/vugn/antidoom>
+
+Released under the open-source **[MIT License](LICENSE)**. © 2026 vugn.
+
+Bundled fonts: [Inter](https://github.com/rsms/inter) and [Inter Tight](https://github.com/rsms/inter-tight) by The Inter Project Authors, licensed under the [SIL Open Font License 1.1](assets/fonts/inter/OFL.txt).
+
+Suggestions, bug reports and pull requests are welcome. If an app's count is off, please attach the `adb logcat -s AntiDoomDetect` output from a debug build (see [docs/tracking.md](docs/tracking.md#debugging)).

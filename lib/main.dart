@@ -1,26 +1,33 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/localization/locale_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'data/repositories/app_repository.dart';
 import 'presentation/dashboard/dashboard_screen.dart';
-import 'presentation/onboarding/onboarding_screen.dart';
+import 'presentation/onboarding/setup_flow.dart';
+import 'presentation/providers/app_state_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Set system UI navigation bar & status bar transparent for dark AMOLED look
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF121212),
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
+  // AntiDoom's own MIT license shows up first on Settings > Licenses.
+  LicenseRegistry.addLicense(() async* {
+    final text = await rootBundle.loadString('LICENSE');
+    yield LicenseEntryWithLineBreaks(const ['AntiDoom'], text);
+  });
+  // Bundled fonts are under the SIL Open Font License.
+  LicenseRegistry.addLicense(() async* {
+    yield LicenseEntryWithLineBreaks(
+        const ['Inter'], await rootBundle.loadString('assets/fonts/inter/OFL.txt'));
+    yield LicenseEntryWithLineBreaks(const ['Inter Tight'],
+        await rootBundle.loadString('assets/fonts/intertight/OFL.txt'));
+  });
+  // Precompile glass shaders so the first lens renders correctly
+  await LiquidGlassShaders.ensureLoaded();
 
   final repository = AppRepository();
   final isOnboardingDone = await repository.isOnboardingCompleted();
@@ -41,13 +48,29 @@ class AntiDoomApp extends ConsumerStatefulWidget {
   ConsumerState<AntiDoomApp> createState() => _AntiDoomAppState();
 }
 
-class _AntiDoomAppState extends ConsumerState<AntiDoomApp> {
+class _AntiDoomAppState extends ConsumerState<AntiDoomApp>
+    with WidgetsBindingObserver {
   late bool _isOnboardingDone;
 
   @override
   void initState() {
     super.initState();
     _isOnboardingDone = widget.isOnboardingDone;
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Native keeps counting while we are in the background: re-sync on return
+    if (state == AppLifecycleState.resumed) {
+      ref.read(appStateProvider.notifier).syncFromNative();
+    }
   }
 
   @override
@@ -57,7 +80,9 @@ class _AntiDoomAppState extends ConsumerState<AntiDoomApp> {
     return MaterialApp(
       title: 'AntiDoom',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
       locale: currentLocale,
       supportedLocales: const [
         Locale('en'),
@@ -71,7 +96,7 @@ class _AntiDoomAppState extends ConsumerState<AntiDoomApp> {
       ],
       home: _isOnboardingDone
           ? const DashboardScreen()
-          : OnboardingScreen(
+          : SetupFlow(
               onComplete: () {
                 setState(() {
                   _isOnboardingDone = true;

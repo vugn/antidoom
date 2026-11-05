@@ -1,11 +1,154 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/localization/app_localizations.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/localization/strings.dart';
+import '../../core/theme/app_palette.dart';
+import '../../core/theme/app_theme.dart';
 import '../../services/native_bridge.dart';
+import '../dashboard/dashboard_screen.dart';
 import '../providers/app_state_provider.dart';
-import '../widgets/language_selector_sheet.dart';
+import '../widgets/glass_widgets.dart';
 
+/// The permission steps (accessibility + battery), with plain-language copy.
+/// Used by the first-run setup and by Settings > Permissions.
+class PermissionSteps extends ConsumerWidget {
+  const PermissionSteps({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final st = ref.watch(appStateProvider);
+    final s = context.s;
+    final p = context.palette;
+
+    Widget step({
+      required int n,
+      required String title,
+      required String desc,
+      required bool done,
+      required VoidCallback onAllow,
+    }) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Panel(
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: done ? p.accent : p.surface2,
+                ),
+                alignment: Alignment.center,
+                child: done
+                    ? const Icon(CupertinoIcons.checkmark_alt,
+                        color: Colors.white, size: 20)
+                    : Text(
+                        '$n',
+                        style: TextStyle(
+                          color: p.text,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: p.text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      desc,
+                      style: TextStyle(color: p.text2, fontSize: 13.5, height: 1.35),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              done
+                  ? Text(
+                      s.doneLabel,
+                      style: TextStyle(
+                        color: p.accent,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    )
+                  : CupertinoButton(
+                      color: p.text,
+                      borderRadius: BorderRadius.circular(20),
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      minimumSize: const Size(0, 38),
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        onAllow();
+                      },
+                      child: Text(
+                        s.allowBtn,
+                        style: TextStyle(
+                          color: p.bg,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        step(
+          n: 1,
+          title: s.stepAccessTitle,
+          desc: s.stepAccessDesc,
+          done: st.permissions['accessibility'] ?? false,
+          onAllow: NativeBridge.requestAccessibilityPermission,
+        ),
+        step(
+          n: 2,
+          title: s.stepBatteryTitle,
+          desc: s.stepBatteryDesc,
+          done: st.permissions['batteryOptimization'] ?? false,
+          onAllow: NativeBridge.requestBatteryOptimization,
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(36, 16, 36, 0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(CupertinoIcons.lock_shield, size: 16, color: p.text3),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  s.privacyNote,
+                  style: TextStyle(color: p.text3, fontSize: 13, height: 1.4),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Settings > Permissions: just the steps, re-checked whenever the user
+/// comes back from system settings.
 class OnboardingScreen extends ConsumerStatefulWidget {
   final VoidCallback onComplete;
 
@@ -32,251 +175,55 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Re-check permissions when returning from system settings
       ref.read(appStateProvider.notifier).refreshPermissions();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final appState = ref.watch(appStateProvider);
-    final permissions = appState.permissions;
-    final l10n = context.l10n;
+    final s = context.s;
+    final p = context.palette;
 
-    final isAccessibilityGranted = permissions['accessibility'] ?? false;
-    final isOverlayGranted = permissions['overlay'] ?? false;
-    final isBatteryGranted = permissions['batteryOptimization'] ?? false;
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-              // Top Bar with Logo & Language Switcher
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: Image.asset(
-                          'assets/images/splash_mark_512.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: AppColors.zenGreenSubtle,
-                              child: const Center(
-                                child: Text('🛡️', style: TextStyle(fontSize: 24)),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'AntiDoom',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          Text(
-                            l10n.onboardingPermissionsBadge,
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const LanguageSwitchButton(compact: true),
-                ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemStyleFor(context),
+      child: Scaffold(
+        body: Stack(
+          children: [
+            ListView(
+              padding: EdgeInsets.only(
+                top: FloatingTopBar.heightOf(context) + 8,
+                bottom: MediaQuery.paddingOf(context).bottom + 24,
               ),
-              const SizedBox(height: 24),
-
-              Text(
-                l10n.onboardingHeroTitle,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  height: 1.3,
-                  letterSpacing: -0.5,
+              physics: const BouncingScrollPhysics(),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 0, 28, 10),
+                  child: Text(s.permissions,
+                      style: AppTheme.display(size: 40, color: p.text)),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                l10n.onboardingHeroSubtitle,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13.5,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Permissions List
-              Expanded(
-                child: ListView(
-                  children: [
-                    _buildPermissionItem(
-                      title: l10n.permAccessibilityTitle,
-                      desc: l10n.permAccessibilityDesc,
-                      isGranted: isAccessibilityGranted,
-                      grantBtnText: l10n.grantPermissionBtn,
-                      onTap: () => NativeBridge.requestAccessibilityPermission(),
-                    ),
-                    const SizedBox(height: 14),
-                    _buildPermissionItem(
-                      title: l10n.permOverlayTitle,
-                      desc: l10n.permOverlayDesc,
-                      isGranted: isOverlayGranted,
-                      grantBtnText: l10n.grantPermissionBtn,
-                      onTap: () => NativeBridge.requestOverlayPermission(),
-                    ),
-                    const SizedBox(height: 14),
-                    _buildPermissionItem(
-                      title: l10n.permBatteryTitle,
-                      desc: l10n.permBatteryDesc,
-                      isGranted: isBatteryGranted,
-                      grantBtnText: l10n.grantPermissionBtn,
-                      onTap: () => NativeBridge.requestBatteryOptimization(),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Bottom Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final repo = ref.read(appRepositoryProvider);
-                    await repo.setOnboardingCompleted(true);
-                    // Automatically activate tracking if permissions granted
-                    if (isAccessibilityGranted && isOverlayGranted) {
-                      await ref.read(appStateProvider.notifier).toggleTracking(true);
-                    }
-                    widget.onComplete();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.zenGreen,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
                   child: Text(
-                    appState.areAllPermissionsGranted
-                        ? l10n.startProtectingBtn
-                        : l10n.continueToDashboardBtn,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    s.setupScreenDesc,
+                    style: TextStyle(color: p.text2, fontSize: 17, height: 1.4),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPermissionItem({
-    required String title,
-    required String desc,
-    required bool isGranted,
-    required String grantBtnText,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isGranted ? AppColors.zenGreen.withValues(alpha: 0.4) : AppColors.border,
-          width: 1.2,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isGranted ? AppColors.zenGreenSubtle : AppColors.surfaceElevated,
-                ),
-                child: Icon(
-                  isGranted ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
-                  color: isGranted ? AppColors.zenGreenLight : AppColors.textMuted,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.only(left: 40),
-            child: Text(
-              desc,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12.5,
-                height: 1.4,
-              ),
+                const PermissionSteps(),
+              ],
             ),
-          ),
-          const SizedBox(height: 12),
-          if (!isGranted)
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: onTap,
-                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                label: Text(grantBtnText),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.zenGreenLight,
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: FloatingTopBar(
+                leading: GlassButton(
+                  icon: CupertinoIcons.chevron_back,
+                  onTap: () => Navigator.of(context).maybePop(),
                 ),
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }

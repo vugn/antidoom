@@ -9,9 +9,9 @@ void main() {
         child: AntiDoomApp(isOnboardingDone: false),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
 
-    // Verify AntiDoom title appears in onboarding
-    expect(find.text('AntiDoom'), findsWidgets);
+    // Setup screen shows on first launch
+    expect(find.text('Choose your language'), findsOneWidget);
   });
 }

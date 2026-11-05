@@ -36,9 +36,15 @@ class NativeBridge {
     int timeLimitSeconds = 900,
     bool showFloatingCounter = true,
     String language = 'en',
+    bool resetSession = true,
+    int warnEvery = 100,
+    int forceBlockAt = 0,
   }) async {
     try {
       final res = await _channel.invokeMethod<bool>('startTracking', {
+        'resetSession': resetSession,
+        'warnEvery': warnEvery,
+        'forceBlockAt': forceBlockAt,
         'blocklist': blocklist,
         'scrollLimit': scrollLimit,
         'timeLimit': timeLimitSeconds,
@@ -59,6 +65,36 @@ class NativeBridge {
       return res ?? false;
     } on PlatformException {
       return false;
+    }
+  }
+
+  /// Debug: shows the floating counter for a few seconds.
+  static Future<bool> previewCounter(int count) async {
+    try {
+      return await _channel.invokeMethod<bool>('previewCounter', {'count': count}) ?? false;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
+  /// Opens an https link in the browser (e.g. the GitHub repo).
+  static Future<bool> openUrl(String url) async {
+    try {
+      return await _channel.invokeMethod<bool>('openUrl', {'url': url}) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> clearSnooze() async {
+    try {
+      await _channel.invokeMethod('clearSnooze');
+    } on PlatformException {
+      // ignore
+    } on MissingPluginException {
+      // ignore
     }
   }
 
@@ -114,7 +150,6 @@ class NativeBridge {
       if (res != null) {
         return {
           'accessibility': res['accessibility'] as bool? ?? false,
-          'overlay': res['overlay'] as bool? ?? false,
           'batteryOptimization': res['batteryOptimization'] as bool? ?? false,
         };
       }
@@ -123,7 +158,6 @@ class NativeBridge {
     }
     return {
       'accessibility': false,
-      'overlay': false,
       'batteryOptimization': false,
     };
   }
@@ -131,12 +165,6 @@ class NativeBridge {
   static Future<void> requestAccessibilityPermission() async {
     try {
       await _channel.invokeMethod('requestAccessibilityPermission');
-    } on PlatformException catch (_) {}
-  }
-
-  static Future<void> requestOverlayPermission() async {
-    try {
-      await _channel.invokeMethod('requestOverlayPermission');
     } on PlatformException catch (_) {}
   }
 
@@ -155,4 +183,29 @@ class NativeBridge {
     } on PlatformException catch (_) {}
     return {};
   }
+
+  /// Real label + icon for each installed package (missing = not installed).
+  static Future<Map<String, InstalledApp>> getAppInfo(List<String> packages) async {
+    try {
+      final res = await _channel.invokeMethod<Map>('getAppInfo', {'packages': packages});
+      if (res == null) return {};
+      return res.map((k, v) {
+        final m = v as Map;
+        return MapEntry(
+          k as String,
+          InstalledApp(label: m['label'] as String, icon: m['icon'] as Uint8List?),
+        );
+      });
+    } on PlatformException {
+      return {};
+    } on MissingPluginException {
+      return {};
+    }
+  }
+}
+
+class InstalledApp {
+  final String label;
+  final Uint8List? icon;
+  const InstalledApp({required this.label, this.icon});
 }

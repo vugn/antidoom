@@ -37,11 +37,11 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^3.3.2
-  google_fonts: ^8.2.1
   flutter_svg: ^2.3.0
   shared_preferences: ^2.5.5
   intl: ^0.20.2
   percent_indicator: ^4.2.5
+  liquid_glass_easy: ^5.2.0
 
 dev_dependencies:
   flutter_test:
@@ -68,6 +68,37 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
+    - assets/images/apps/
+    - LICENSE
+    - assets/fonts/inter/OFL.txt
+    - assets/fonts/intertight/OFL.txt
+
+  # Fonts are bundled so the app works fully offline (no runtime downloads).
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/inter/Inter-400.ttf
+          weight: 400
+        - asset: assets/fonts/inter/Inter-500.ttf
+          weight: 500
+        - asset: assets/fonts/inter/Inter-600.ttf
+          weight: 600
+        - asset: assets/fonts/inter/Inter-700.ttf
+          weight: 700
+        - asset: assets/fonts/inter/Inter-800.ttf
+          weight: 800
+    - family: InterTight
+      fonts:
+        - asset: assets/fonts/intertight/InterTight-400.ttf
+          weight: 400
+        - asset: assets/fonts/intertight/InterTight-500.ttf
+          weight: 500
+        - asset: assets/fonts/intertight/InterTight-600.ttf
+          weight: 600
+        - asset: assets/fonts/intertight/InterTight-700.ttf
+          weight: 700
+        - asset: assets/fonts/intertight/InterTight-800.ttf
+          weight: 800
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -1,241 +1,420 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/localization/app_localizations.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/constants/social_apps.dart';
+import '../../core/localization/strings.dart';
+import '../../core/theme/app_palette.dart';
+import '../../core/theme/app_theme.dart';
 import '../onboarding/onboarding_screen.dart';
-import '../overlay_preview/overlay_preview_dialog.dart';
 import '../providers/app_state_provider.dart';
 import '../settings/blocklist_screen.dart';
-import 'widgets/daily_breakdown_card.dart';
-import 'widgets/header_logo_widget.dart';
-import 'widgets/hero_stats_card.dart';
-import 'widgets/live_scroll_monitor_card.dart';
+import '../widgets/glass_widgets.dart';
 
+/// Home: one ring (swipes in a row vs. the limit), one switch, today's numbers.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
+  static void openSetup(BuildContext context) {
+    Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (ctx) => OnboardingScreen(onComplete: () => Navigator.of(ctx).pop()),
+      ),
+    );
+  }
+
+  static void openSettings(BuildContext context) {
+    Navigator.of(context).push(
+      CupertinoPageRoute(builder: (_) => const BlocklistScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final appState = ref.watch(appStateProvider);
+    final st = ref.watch(appStateProvider);
+    final installed = ref.watch(installedAppsProvider).value ?? const {};
     final notifier = ref.read(appStateProvider.notifier);
-    final l10n = context.l10n;
+    final s = context.s;
+    final p = context.palette;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: RefreshIndicator(
-          color: AppColors.zenGreen,
-          backgroundColor: AppColors.surface,
-          onRefresh: () async {
-            await notifier.refreshPermissions();
-          },
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            children: [
-              // Top Header with Language Switcher
-              HeaderLogoWidget(
-                isTrackingActive: appState.isTrackingActive,
-                onToggleTracking: () {
-                  notifier.toggleTracking(!appState.isTrackingActive);
-                },
-              ),
-              const SizedBox(height: 20),
+    final today = st.stats.todayScrollCount;
+    final blockAt = st.forceBlockAt;
+    final every = st.warnEvery;
+    final warnEvery = st.warnEnabled ? every : 0;
+    final snoozed = st.snoozedToday;
+    final blocked = blockAt > 0 && today >= blockAt && !snoozed;
+    // Ring: progress to the hard block if set, else to the next check-in.
+    final double progress;
+    final String ringSub;
+    final String explainer;
+    if (blockAt > 0) {
+      progress = today / blockAt;
+      ringSub = s.sessionOf(blockAt);
+      explainer = blocked ? s.blockedToday : s.explainBlock(blockAt, warnEvery);
+    } else if (warnEvery > 0) {
+      progress = (today % warnEvery) / warnEvery;
+      ringSub = s.nextCheckIn((today ~/ warnEvery + 1) * warnEvery);
+      explainer = s.explainWarn(warnEvery);
+    } else {
+      progress = 0;
+      ringSub = '';
+      explainer = s.explainCountOnly;
+    }
+    final ringColor = !st.isTrackingActive || snoozed
+        ? p.text3
+        : blocked
+            ? p.danger
+            : progress > 0.8
+                ? p.warning
+                : p.accent;
+    final watching = st.rules.where((r) => r.isEnabled).length;
 
-              // Master Switch Banner
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: appState.isTrackingActive
-                        ? AppColors.zenGreen.withValues(alpha: 0.5)
-                        : AppColors.border,
-                  ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: _systemStyle(dark),
+      child: Scaffold(
+        body: Stack(
+          children: [
+            RefreshIndicator(
+              color: p.accent,
+              edgeOffset: FloatingTopBar.heightOf(context),
+              onRefresh: notifier.syncFromNative,
+              child: ListView(
+                padding: EdgeInsets.only(
+                  top: FloatingTopBar.heightOf(context),
+                  bottom: MediaQuery.paddingOf(context).bottom + 32,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            appState.isTrackingActive
-                                ? l10n.masterActiveTitle
-                                : l10n.masterPausedTitle,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            appState.isTrackingActive
-                                ? l10n.masterActiveDesc
-                                : l10n.masterPausedDesc,
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Switch(
-                      value: appState.isTrackingActive,
-                      onChanged: (val) => notifier.toggleTracking(val),
-                    ),
-                  ],
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
                 ),
-              ),
-
-              // Permissions warning banner if any missing
-              if (!appState.areAllPermissionsGranted) ...[
-                const SizedBox(height: 14),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => OnboardingScreen(
-                          onComplete: () => Navigator.of(context).pop(),
-                        ),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.amberSubtle,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.softAmber.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    child: Row(
+                children: [
+                  // ---- Ring
+                  SizedBox(
+                    height: 300,
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        const Icon(
-                          Icons.warning_amber_rounded,
-                          color: AppColors.softAmber,
-                          size: 22,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            l10n.missingPermissionsBanner,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w500,
+                        Container(
+                          width: 360,
+                          height: 360,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                ringColor.withValues(alpha: dark ? 0.20 : 0.16),
+                                ringColor.withValues(alpha: 0),
+                              ],
                             ),
                           ),
                         ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: AppColors.softAmber,
+                        ProgressRing(
+                          value: progress,
+                          color: ringColor,
+                          track: p.text.withValues(alpha: 0.07),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              bigNumber(context, '$today', size: 76),
+                              const SizedBox(height: 2),
+                              if (ringSub.isNotEmpty)
+                              Text(
+                                ringSub,
+                                style: TextStyle(
+                                  color: p.text2,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                s.swipesTodayCaption,
+                                style: TextStyle(color: p.text3, fontSize: 13),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
-
-              const SizedBox(height: 18),
-
-              // Hero Stats Card
-              HeroStatsCard(
-                stats: appState.stats,
-                isTrackingActive: appState.isTrackingActive,
-              ),
-
-              const SizedBox(height: 18),
-
-              // Floating Scroll Counter & Live Tracker Card
-              LiveScrollMonitorCard(
-                isTrackingActive: appState.isTrackingActive,
-                isFloatingCounterEnabled: appState.isFloatingCounterEnabled,
-                currentScrolls: appState.currentSessionScrolls,
-                maxScrollLimit: 50,
-                activePackage: appState.currentActivePackage,
-                onToggleFloatingCounter: (val) {
-                  notifier.toggleFloatingCounter(val);
-                },
-                onSimulateScroll: () {
-                  notifier.simulateScroll('com.instagram.android');
-                },
-                onTriggerTestOverlay: () {
-                  final randomAffirmation = l10n.getRandomAffirmation();
-                  final count = appState.currentSessionScrolls > 0
-                      ? appState.currentSessionScrolls
-                      : 50;
-
-                  // Show in-app preview dialog
-                  OverlayPreviewDialog.show(
-                    context,
-                    appName: 'Instagram',
-                    scrollCount: count,
-                    message: randomAffirmation,
-                  );
-                  // Also invoke native test
-                  notifier.testTriggerOverlay(
-                    appName: 'Instagram',
-                    scrollCount: count,
-                    message: randomAffirmation,
-                  );
-                },
-              ),
-
-              const SizedBox(height: 18),
-
-              // Daily Breakdown Card
-              DailyBreakdownCard(
-                rules: appState.rules,
-                perAppScrolls: appState.stats.perAppScrolls,
-                weeklyHistory: appState.stats.weeklyScrollHistory,
-              ),
-
-              const SizedBox(height: 18),
-
-              // Action buttons row
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const BlocklistScreen(),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.tune_rounded, size: 18),
-                      label: Text(l10n.targetAppsBtn),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(48, 4, 48, 28),
+                    child: Text(
+                      explainer,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: p.text2, fontSize: 15, height: 1.4),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => OnboardingScreen(
-                              onComplete: () => Navigator.of(context).pop(),
+
+                  // ---- Snoozed for today
+                  if (snoozed)
+                    _pad(
+                      Panel(
+                        child: Row(
+                          children: [
+                            Icon(CupertinoIcons.moon_fill, color: p.text2, size: 24),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    s.snoozedTitle,
+                                    style: TextStyle(
+                                      color: p.text,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    s.snoozedDesc,
+                                    style: TextStyle(color: p.text2, fontSize: 13.5),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            CupertinoButton(
+                              color: p.text,
+                              borderRadius: BorderRadius.circular(20),
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              minimumSize: const Size(0, 38),
+                              onPressed: notifier.resumeToday,
+                              child: Text(
+                                s.resumeBtn,
+                                style: TextStyle(
+                                  color: p.bg,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // ---- Setup needed
+                  if (!st.areAllPermissionsGranted)
+                    _pad(
+                      Panel(
+                        color: p.warning.withValues(alpha: dark ? 0.14 : 0.12),
+                        child: Row(
+                          children: [
+                            Icon(CupertinoIcons.exclamationmark_circle_fill,
+                                color: p.warning, size: 28),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    s.setupTitle,
+                                    style: TextStyle(
+                                      color: p.text,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    s.setupDesc,
+                                    style: TextStyle(color: p.text2, fontSize: 13.5),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            CupertinoButton(
+                              color: p.text,
+                              borderRadius: BorderRadius.circular(20),
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              minimumSize: const Size(0, 38),
+                              onPressed: () => openSetup(context),
+                              child: Text(
+                                s.continueBtn,
+                                style: TextStyle(
+                                  color: p.bg,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // ---- Protection switch
+                  _pad(
+                    Panel(
+                      child: Row(
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: st.isTrackingActive ? p.accent : p.text3,
+                              boxShadow: st.isTrackingActive
+                                  ? [
+                                      BoxShadow(
+                                        color: p.accent.withValues(alpha: 0.5),
+                                        blurRadius: 10,
+                                      ),
+                                    ]
+                                  : null,
                             ),
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.security_rounded, size: 18),
-                      label: Text(l10n.permissionStatusBtn),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  st.isTrackingActive ? s.protectionOn : s.protectionOff,
+                                  style: TextStyle(
+                                    color: p.text,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  st.isTrackingActive
+                                      ? s.watchingApps(watching)
+                                      : s.turnOnHint,
+                                  style: TextStyle(color: p.text2, fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          ),
+                          AccentSwitch(
+                            value: st.isTrackingActive,
+                            onChanged: notifier.toggleTracking,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // ---- Today's numbers
+                  _pad(
+                    Panel(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: IntrinsicHeight(
+                        child: Row(
+                          children: [
+                            _stat(context, s.statToday, '${st.stats.todayScrollCount}'),
+                            VerticalDivider(width: 1, thickness: 0.5, color: p.line),
+                            _stat(context, s.statBreaks, '${st.stats.todayInterventions}'),
+                            VerticalDivider(width: 1, thickness: 0.5, color: p.line),
+                            _stat(context, s.statSaved,
+                                s.minutesShort(st.stats.todaySavedMinutes)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // ---- Per app
+                  GroupLabel(s.swipesToday),
+                  _pad(
+                    RowList(
+                      children: [
+                        for (final rule in st.rules)
+                          if (SocialApp.forPackage(rule.packageName) case final app?)
+                            Builder(builder: (context) {
+                              final count = app.packages.fold<int>(
+                                  0, (n, pkg) => n + (st.stats.perAppScrolls[pkg] ?? 0));
+                              final isInstalled = installed.isEmpty ||
+                                  app.packages.any(installed.containsKey);
+                              return ListRow(
+                                leading: AppLogo(
+                                  app: app,
+                                  dimmed: !rule.isEnabled || !isInstalled,
+                                ),
+                                title: app.name,
+                                subtitle: !isInstalled
+                                    ? s.notInstalled
+                                    : !rule.isEnabled
+                                        ? s.paused
+                                        : null,
+                                trailing: Text(
+                                  '$count',
+                                  style: AppTheme.display(
+                                    size: 20,
+                                    weight: FontWeight.w600,
+                                    color: count == 0 ? p.text3 : p.text,
+                                  ),
+                                ),
+                                onTap: () => openSettings(context),
+                              );
+                            }),
+                      ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 28),
-            ],
-          ),
+            ),
+
+            // ---- Floating glass top bar
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: FloatingTopBar(
+                title: Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Text(
+                    'AntiDoom',
+                    style: AppTheme.display(size: 22, color: p.text),
+                  ),
+                ),
+                actions: [
+                  GlassButton(
+                    icon: CupertinoIcons.slider_horizontal_3,
+                    tooltip: s.settingsTitle,
+                    onTap: () => openSettings(context),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  static Widget _pad(Widget child) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: child,
+      );
+
+  static Widget _stat(BuildContext context, String label, String value) {
+    final p = context.palette;
+    return Expanded(
+      child: Column(
+        children: [
+          bigNumber(context, value, size: 30),
+          const SizedBox(height: 4),
+          Text(label, style: TextStyle(color: p.text2, fontSize: 13)),
+        ],
+      ),
+    );
+  }
 }
+
+SystemUiOverlayStyle _systemStyle(bool dark) => SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarContrastEnforced: false,
+      statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+      statusBarBrightness: dark ? Brightness.dark : Brightness.light,
+      systemNavigationBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+    );
+
+SystemUiOverlayStyle systemStyleFor(BuildContext context) =>
+    _systemStyle(Theme.of(context).brightness == Brightness.dark);

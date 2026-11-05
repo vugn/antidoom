@@ -1,61 +1,66 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:antidoom/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Pump a fixed amount of time, letting async prefs writes complete.
+Future<void> settle(WidgetTester tester) async {
+  for (var i = 0; i < 6; i++) {
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    await tester.pump(const Duration(milliseconds: 200));
+  }
+}
+
 void main() {
-  testWidgets('App starts with dominant English and switches to Indonesian seamlessly',
-      (WidgetTester tester) async {
+  testWidgets('Home shows status; language switches from Settings', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
-    tester.view.devicePixelRatio = 1.0;
+    tester.view.devicePixelRatio = 2.6;
     addTearDown(() => tester.view.resetPhysicalSize());
 
     SharedPreferences.setMockInitialValues({});
+    const channel = MethodChannel('com.antidoom/native');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+      switch (call.method) {
+        case 'checkPermissions':
+          return {'accessibility': true, 'batteryOptimization': true};
+        case 'getNativeStats':
+          return {'isTracking': false, 'perAppScrolls': <String, int>{}};
+        case 'getAppInfo':
+          return <String, dynamic>{};
+        default:
+          return true;
+      }
+    });
+    addTearDown(() =>
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null));
 
     await tester.pumpWidget(
-      const ProviderScope(
-        child: AntiDoomApp(isOnboardingDone: true),
-      ),
+      const ProviderScope(child: AntiDoomApp(isOnboardingDone: true)),
     );
-    await tester.pumpAndSettle();
+    await settle(tester);
 
-    // Verify initial English texts appear (Dominant / Default)
-    expect(find.text('Break the Loop • Reclaim Time'), findsOneWidget);
-    expect(find.text("Today's Achievements"), findsOneWidget);
-    expect(find.text('Floating Scroll Counter'), findsOneWidget);
-    expect(find.text('Target Apps'), findsOneWidget);
+    expect(find.text('AntiDoom'), findsOneWidget);
+    expect(find.text('Protection is off'), findsOneWidget);
+    expect(find.text('Swipes today'), findsOneWidget);
 
-    // Find and tap the language switch button (EN)
-    final langBtn = find.text('EN');
-    expect(langBtn, findsOneWidget);
-    await tester.tap(langBtn);
-    await tester.pumpAndSettle();
+    // Open Settings and switch to Indonesian
+    await tester.tap(find.byIcon(CupertinoIcons.slider_horizontal_3));
+    await settle(tester);
+    expect(find.text('Settings'), findsOneWidget);
 
-    // The language bottom sheet should be visible with Indonesian option
-    final idOption = find.text('Bahasa Indonesia');
-    expect(idOption, findsOneWidget);
-    await tester.tap(idOption);
-    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Language'));
+    await settle(tester);
+    await tester.tap(find.text('Language'));
+    await settle(tester);
+    await tester.tap(find.text('Bahasa Indonesia').last);
+    await settle(tester);
+    expect(find.text('Umum'), findsOneWidget);
 
-    // Verify UI has updated dynamically to Indonesian
-    expect(find.text('Pencapaian Hari Ini'), findsOneWidget);
-    expect(find.text('Atur Target App'), findsOneWidget);
-    expect(find.text('ID'), findsOneWidget);
-
-    // Switch back to English
-    final idLangBtn = find.text('ID');
-    await tester.tap(idLangBtn);
-    await tester.pumpAndSettle();
-
-    final enOption = find.text('English');
-    expect(enOption, findsOneWidget);
-    await tester.tap(enOption);
-    await tester.pumpAndSettle();
-
-    // Verify English returns
-    expect(find.text("Today's Achievements"), findsOneWidget);
-    expect(find.text('Target Apps'), findsOneWidget);
-    expect(find.text('EN'), findsOneWidget);
+    // Back home: copy is Indonesian
+    await tester.tap(find.byIcon(CupertinoIcons.chevron_back));
+    await settle(tester);
+    expect(find.text('Proteksi mati'), findsOneWidget);
   });
 }

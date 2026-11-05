@@ -2,12 +2,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Permissions required for AntiDoom operation -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
 
     <application
         android:label="AntiDoom"
@@ -57,11 +55,6 @@
                 android:value="Anti-doomscrolling monitoring and scroll counting service" />
         </service>
 
-        <!-- Overlay Service: Handles floating scroll counter and full-screen interceptor -->
-        <service
-            android:name=".services.OverlayService"
-            android:exported="false" />
-
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -70,6 +63,13 @@
     </application>
 
     <queries>
+        <!-- Android 11+ package visibility: needed to read real app icons/labels -->
+        <package android:name="com.instagram.android" />
+        <package android:name="com.zhiliaoapp.musically" />
+        <package android:name="com.ss.android.ugc.trill" />
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.twitter.android" />
+        <package android:name="com.facebook.katana" />
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

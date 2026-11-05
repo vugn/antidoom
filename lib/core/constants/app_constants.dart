@@ -3,6 +3,13 @@ class AppConstants {
   static const String appTagline = 'Reclaim Your Time. Break the Loop.';
   static const String nativeChannel = 'com.antidoom/native';
 
+  // Open source
+  static const String author = 'vugn';
+  static const String copyrightYear = '2026';
+  static const String license = 'MIT';
+  static const String githubUrl = 'https://github.com/vugn/antidoom';
+  static String get copyright => '© $copyrightYear $author';
+
   // Default Targets
   static const List<Map<String, String>> defaultTrackedApps = [
     {
@@ -39,6 +46,11 @@ class AppConstants {
 
   static const int defaultScrollThreshold = 50;
   static const int defaultTimeLimitMinutes = 15;
+
+  // Unified "stop at slide #N" limit (applies to ALL monitored social media)
+  static const int defaultScrollStopLimit = 50;
+  static const int minScrollStopLimit = 5;
+  static const int maxScrollStopLimit = 200;
 
   static const List<String> affirmationsEn = [
     'That\'s enough scrolling for now. Give your eyes a rest and take a deep breath.',

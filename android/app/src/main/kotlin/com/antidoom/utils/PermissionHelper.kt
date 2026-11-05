@@ -12,7 +12,9 @@ import com.antidoom.services.AntiDoomAccessibilityService
 object PermissionHelper {
 
     fun isAccessibilityServiceEnabled(context: Context): Boolean {
-        val expectedServiceName = "${context.packageName}/${AntiDoomAccessibilityService::class.java.canonicalName}"
+        // The service is connected right now: that's the strongest signal.
+        if (AntiDoomAccessibilityService.instance != null) return true
+        val expectedServiceName = "${context.packageName}/${AntiDoomAccessibilityService::class.java.name}"
         val enabledServices = Settings.Secure.getString(
             context.contentResolver,
             Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
@@ -23,19 +25,14 @@ object PermissionHelper {
 
         while (colonSplitter.hasNext()) {
             val componentName = colonSplitter.next()
-            if (componentName.equals(expectedServiceName, ignoreCase = true)) {
+            // Entries may also use the short form "com.antidoom/.services.X".
+            val full = android.content.ComponentName.unflattenFromString(componentName)
+                ?.flattenToString() ?: componentName
+            if (full.equals(expectedServiceName, ignoreCase = true)) {
                 return true
             }
         }
         return false
-    }
-
-    fun isOverlayPermissionGranted(context: Context): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Settings.canDrawOverlays(context)
-        } else {
-            true
-        }
     }
 
     fun isBatteryOptimizationIgnored(context: Context): Boolean {
@@ -54,18 +51,6 @@ object PermissionHelper {
         context.startActivity(intent)
     }
 
-    fun openOverlaySettings(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:${context.packageName}")
-            ).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            context.startActivity(intent)
-        }
-    }
-
     fun requestIgnoreBatteryOptimization(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val intent = Intent(
@@ -81,7 +66,6 @@ object PermissionHelper {
     fun getPermissionStatusMap(context: Context): Map<String, Boolean> {
         return mapOf(
             "accessibility" to isAccessibilityServiceEnabled(context),
-            "overlay" to isOverlayPermissionGranted(context),
             "batteryOptimization" to isBatteryOptimizationIgnored(context)
         )
     }
