@@ -3,7 +3,11 @@ package com.antidoom
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
+import android.view.View
+import android.view.ViewTreeObserver
 import java.io.ByteArrayOutputStream
 import com.antidoom.services.AntiDoomAccessibilityService
 import com.antidoom.services.AntiDoomForegroundService
@@ -19,6 +23,42 @@ class MainActivity : FlutterActivity() {
 
     private val CHANNEL = "com.antidoom/native"
     private var methodChannel: MethodChannel? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) holdSplashForAnimation()
+    }
+
+    /**
+     * Android 12+: the splash eyes (drawable/avd_splash_eyes.xml) take about
+     * 1 s to open and look up. Flutter is often ready sooner and would cut
+     * them off, so hold the first frame until they're done, then fade out.
+     */
+    private fun holdSplashForAnimation() {
+        val start = SystemClock.uptimeMillis()
+        val content = findViewById<View>(android.R.id.content)
+        content.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                if (SystemClock.uptimeMillis() - start < SPLASH_HOLD_MS) return false
+                content.viewTreeObserver.removeOnPreDrawListener(this)
+                return true
+            }
+        })
+        // If nothing else asks for a frame after the hold, ask once so the
+        // listener above runs again and the splash can't get stuck.
+        content.postDelayed({ content.invalidate() }, SPLASH_HOLD_MS + 16)
+        splashScreen.setOnExitAnimationListener { splash ->
+            splash.animate()
+                .alpha(0f)
+                .setDuration(220L)
+                .withEndAction { splash.remove() }
+                .start()
+        }
+    }
+
+    private companion object {
+        const val SPLASH_HOLD_MS = 1050L
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

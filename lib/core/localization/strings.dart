@@ -212,6 +212,36 @@ class S {
   String get obPermTitle => _t('Last step: permissions', 'Langkah terakhir: izin');
   String get startBtn => _t('Start AntiDoom', 'Mulai AntiDoom');
 
+  // Accessibility disclosure (Google Play prominent disclosure + consent)
+  String get a11yDisclosureTitle =>
+      _t('Before you turn on Accessibility', 'Sebelum menyalakan Aksesibilitas');
+  String get a11yDisclosureIntro => _t(
+        "AntiDoom uses Android's Accessibility Service to count short videos. Here is exactly what it does with it.",
+        'AntiDoom memakai Layanan Aksesibilitas Android untuk menghitung video pendek. Ini persis apa yang dilakukannya.',
+      );
+  String get a11yReadsTitle => _t('What it reads', 'Yang dibaca');
+  String get a11yReadsBody => _t(
+        'Only in the short-video apps you picked (TikTok, Instagram, YouTube, Facebook, X): which screen is open, and the creator name and caption of the video on screen.',
+        'Hanya di aplikasi video pendek yang kamu pilih (TikTok, Instagram, YouTube, Facebook, X): layar mana yang terbuka, serta nama kreator dan caption video yang sedang tampil.',
+      );
+  String get a11yWhyTitle => _t('Why', 'Untuk apa');
+  String get a11yWhyBody => _t(
+        'To know when you are in a video feed, to recognise each video so it is counted once, and to show the counter, check-ins and block screen on top of the feed.',
+        'Untuk mengetahui saat kamu di feed video, mengenali tiap video agar dihitung sekali, dan menampilkan counter, check-in, serta layar blokir di atas feed.',
+      );
+  String get a11yPrivateTitle => _t('What stays private', 'Yang tetap privat');
+  String get a11yPrivateBody => _t(
+        'Everything is processed on your phone. Only a short hash of each video is kept, never the text, and nothing is sent anywhere. It never reads your messages, chats or what you type.',
+        'Semuanya diproses di HP kamu. Hanya hash pendek tiap video yang disimpan, bukan teksnya, dan tidak ada yang dikirim ke mana pun. AntiDoom tidak pernah membaca pesan, chat, atau apa yang kamu ketik.',
+      );
+  String get a11yControlTitle => _t("You're in control", 'Kamu yang pegang kendali');
+  String get a11yControlBody => _t(
+        'You can turn it off any time in Android Settings > Accessibility. Without it, AntiDoom cannot count videos.',
+        'Kamu bisa mematikannya kapan saja di Pengaturan Android > Aksesibilitas. Tanpa ini, AntiDoom tidak bisa menghitung video.',
+      );
+  String get a11yAgree => _t('Agree and continue', 'Setuju dan lanjutkan');
+  String get a11yDecline => _t('No thanks', 'Jangan sekarang');
+
   // Support (Google Play build)
   String get support => _t('Support AntiDoom', 'Dukung AntiDoom');
   String get removeAds => _t('Remove ads', 'Hapus iklan');

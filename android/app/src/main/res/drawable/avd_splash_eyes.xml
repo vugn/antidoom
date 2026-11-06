@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ splash: the AntiDoom eyes open looking down (at the phone),
+  then look up. Same geometry as brand/svg (256 viewBox), scaled to sit in the
+  192 dp safe circle of a 288 dp splash icon with no icon background.
+  Starts at 380 ms, after the app-launch zoom (which hid an earlier start),
+  and ends at about 980 ms; MainActivity holds the splash until then.
+-->
+<animated-vector
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="288dp"
+            android:height="288dp"
+            android:viewportWidth="288"
+            android:viewportHeight="288">
+            <group
+                android:translateX="48"
+                android:translateY="48"
+                android:scaleX="0.75"
+                android:scaleY="0.75">
+            <group
+                android:name="eyeL"
+                android:pivotX="73"
+                android:pivotY="128"
+                android:scaleY="0.08">
+                <path android:fillColor="@color/splash_sclera" android:pathData="M45.00 128.00A28.00 29.00 0 1 0 101.00 128.00A28.00 29.00 0 1 0 45.00 128.00Z" />
+                <path android:fillColor="@color/splash_ring" android:fillType="evenOdd" android:pathData="M21.00 128.00A52.00 53.00 0 1 0 125.00 128.00A52.00 53.00 0 1 0 21.00 128.00ZM45.00 128.00A28.00 29.00 0 1 0 101.00 128.00A28.00 29.00 0 1 0 45.00 128.00Z" />
+                <group android:name="pupilL" android:translateY="18">
+                    <path android:fillColor="@color/splash_pupil" android:pathData="M55.95 118.23A19.00 19.00 0 1 0 93.95 118.23A19.00 19.00 0 1 0 55.95 118.23Z" />
+                </group>
+            </group>
+            <group
+                android:name="eyeR"
+                android:pivotX="183"
+                android:pivotY="128"
+                android:scaleY="0.08">
+                <path android:fillColor="@color/splash_sclera" android:pathData="M155.00 128.00A28.00 29.00 0 1 0 211.00 128.00A28.00 29.00 0 1 0 155.00 128.00Z" />
+                <path android:fillColor="@color/splash_ring" android:fillType="evenOdd" android:pathData="M131.00 128.00A52.00 53.00 0 1 0 235.00 128.00A52.00 53.00 0 1 0 131.00 128.00ZM155.00 128.00A28.00 29.00 0 1 0 211.00 128.00A28.00 29.00 0 1 0 155.00 128.00Z" />
+                <group android:name="pupilR" android:translateY="18">
+                    <path android:fillColor="@color/splash_pupil" android:pathData="M165.95 118.23A19.00 19.00 0 1 0 203.95 118.23A19.00 19.00 0 1 0 165.95 118.23Z" />
+                </group>
+            </group>
+            </group>
+        </vector>
+    </aapt:attr>
+    <target android:name="eyeL">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="scaleY"
+                android:valueFrom="0.08"
+                android:valueTo="1"
+                android:startOffset="380"
+                android:duration="280"
+                android:interpolator="@android:interpolator/overshoot" />
+        </aapt:attr>
+    </target>
+    <target android:name="eyeR">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="scaleY"
+                android:valueFrom="0.08"
+                android:valueTo="1"
+                android:startOffset="410"
+                android:duration="280"
+                android:interpolator="@android:interpolator/overshoot" />
+        </aapt:attr>
+    </target>
+    <target android:name="pupilL">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="translateY"
+                android:valueFrom="18"
+                android:valueTo="0"
+                android:startOffset="680"
+                android:duration="300"
+                android:interpolator="@android:interpolator/overshoot" />
+        </aapt:attr>
+    </target>
+    <target android:name="pupilR">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="translateY"
+                android:valueFrom="18"
+                android:valueTo="0"
+                android:startOffset="680"
+                android:duration="300"
+                android:interpolator="@android:interpolator/overshoot" />
+        </aapt:attr>
+    </target>
+</animated-vector>

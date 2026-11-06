@@ -9,6 +9,7 @@ import '../../services/native_bridge.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../../services/monetization/monetization.dart';
 import '../providers/app_state_provider.dart';
+import '../widgets/accessibility_disclosure_sheet.dart';
 import '../widgets/glass_widgets.dart';
 
 /// The permission steps, with plain-language copy: accessibility and battery
@@ -192,7 +193,13 @@ class _PermissionStepsState extends ConsumerState<PermissionSteps>
           title: s.stepAccessTitle,
           desc: s.stepAccessDesc,
           done: st.permissions['accessibility'] ?? false,
-          onAllow: NativeBridge.requestAccessibilityPermission,
+          // Play policy: show the prominent disclosure and get an explicit
+          // "Agree" before sending the user to Android's Accessibility settings.
+          onAllow: () async {
+            if (await AccessibilityDisclosureSheet.show(context)) {
+              await NativeBridge.requestAccessibilityPermission();
+            }
+          },
         ),
         step(
           n: 2,

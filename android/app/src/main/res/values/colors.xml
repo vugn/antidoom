@@ -4,4 +4,8 @@
     <color name="ic_launcher_background">#12B76A</color>
     <color name="brand_green">#12B76A</color>
     <color name="splash_background">#F5F5F2</color>
+    <!-- Animated splash eyes (drawable/avd_splash_eyes.xml) -->
+    <color name="splash_ring">#0A0A0A</color>
+    <color name="splash_sclera">#00000000</color>
+    <color name="splash_pupil">#0A0A0A</color>
 </resources>
