@@ -49,10 +49,14 @@ class AppState {
   });
 
   /// Overlays are drawn by the accessibility service, so the separate
-  /// "display over other apps" permission is no longer required.
+  /// "display over other apps" permission is not required. Vendor steps
+  /// (auto-start, MIUI background pop-ups) count only on phones that have them;
+  /// native reports them as granted elsewhere.
   bool get areAllPermissionsGranted =>
       (permissions['accessibility'] ?? false) &&
-      (permissions['batteryOptimization'] ?? false);
+      (permissions['batteryOptimization'] ?? false) &&
+      (permissions['autostart'] ?? true) &&
+      (permissions['popup'] ?? true);
 
   AppState copyWith({
     bool? isTrackingActive,

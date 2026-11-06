@@ -11,13 +11,87 @@ import '../../services/monetization/monetization.dart';
 import '../providers/app_state_provider.dart';
 import '../widgets/glass_widgets.dart';
 
-/// The permission steps (accessibility + battery), with plain-language copy.
-/// Used by the first-run setup and by Settings > Permissions.
-class PermissionSteps extends ConsumerWidget {
+/// The permission steps, with plain-language copy: accessibility and battery
+/// everywhere, plus auto-start and (MIUI) background pop-ups on phones whose
+/// vendor kills background apps. Used by the first-run setup and by
+/// Settings > Permissions.
+class PermissionSteps extends ConsumerStatefulWidget {
   const PermissionSteps({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PermissionSteps> createState() => _PermissionStepsState();
+}
+
+class _PermissionStepsState extends ConsumerState<PermissionSteps>
+    with WidgetsBindingObserver {
+  /// Vendor screen the user was sent to and has not come back from yet.
+  String? _pendingOem;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final kind = _pendingOem;
+    if (state != AppLifecycleState.resumed || kind == null) return;
+    _pendingOem = null;
+    _afterOemScreen(kind);
+  }
+
+  Future<void> _openOem(String kind) async {
+    final opened = await NativeBridge.openOemPermission(kind);
+    if (!mounted) return;
+    if (opened) {
+      _pendingOem = kind;
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(context.s.oemOpenFailed)));
+    }
+  }
+
+  /// Back from a vendor screen: re-read what we can, ask about what we can't.
+  Future<void> _afterOemScreen(String kind) async {
+    final notifier = ref.read(appStateProvider.notifier);
+    await notifier.refreshPermissions();
+    final perms = ref.read(appStateProvider).permissions;
+    if (!mounted || (perms['${kind}Checkable'] ?? false) || (perms[kind] ?? false)) return;
+
+    final s = context.s;
+    final yes = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text(s.oemConfirmTitle),
+        content: Text(s.oemConfirmBody),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(s.oemConfirmNo),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(s.oemConfirmYes),
+          ),
+        ],
+      ),
+    );
+    if (yes == true) {
+      await NativeBridge.confirmOemPermission(kind, true);
+      await notifier.refreshPermissions();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final st = ref.watch(appStateProvider);
     final s = context.s;
     final p = context.palette;
@@ -127,6 +201,22 @@ class PermissionSteps extends ConsumerWidget {
           done: st.permissions['batteryOptimization'] ?? false,
           onAllow: NativeBridge.requestBatteryOptimization,
         ),
+        if (st.permissions['autostartNeeded'] ?? false)
+          step(
+            n: 3,
+            title: s.stepAutostartTitle,
+            desc: s.stepAutostartDesc,
+            done: st.permissions['autostart'] ?? false,
+            onAllow: () => _openOem('autostart'),
+          ),
+        if (st.permissions['popupNeeded'] ?? false)
+          step(
+            n: (st.permissions['autostartNeeded'] ?? false) ? 4 : 3,
+            title: s.stepPopupTitle,
+            desc: s.stepPopupDesc,
+            done: st.permissions['popup'] ?? false,
+            onAllow: () => _openOem('popup'),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(36, 16, 36, 0),
           child: Row(

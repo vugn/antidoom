@@ -266,6 +266,15 @@ class AntiDoomAccessibilityService : AccessibilityService() {
         recentKeys.addAll(TrackerPrefs.loadRecentReels(applicationContext))
         lastCountedKey = recentKeys.lastOrNull()
 
+        // The system rebinds us after the app was killed, a reboot, or (on vendor
+        // ROMs) an auto-start. Bring the foreground service back with us; a bound
+        // accessibility service is allowed to start one from the background.
+        if (isTrackingActive) {
+            try {
+                AntiDoomForegroundService.startService(applicationContext)
+            } catch (_: Exception) {}
+        }
+
         if (!isScreenReceiverRegistered) {
             val filter = IntentFilter().apply {
                 addAction(Intent.ACTION_SCREEN_OFF)

@@ -82,8 +82,8 @@ class S {
   // Setup
   String get setupScreenTitle => _t('Set up AntiDoom', 'Atur AntiDoom');
   String get setupScreenDesc => _t(
-        'Two quick steps so AntiDoom can count your swipes.',
-        'Dua langkah singkat agar AntiDoom bisa menghitung swipe kamu.',
+        'A few quick steps so AntiDoom can count your swipes and keep running.',
+        'Beberapa langkah singkat agar AntiDoom bisa menghitung swipe dan tetap berjalan.',
       );
   String get stepAccessTitle => _t('Allow accessibility', 'Izinkan aksesibilitas');
   String get stepAccessDesc => _t(
@@ -95,6 +95,30 @@ class S {
   String get stepBatteryDesc => _t(
         'Stops your phone from closing AntiDoom in the background.',
         'Agar HP tidak menutup AntiDoom di latar belakang.',
+      );
+  String get stepAutostartTitle => _t('Allow auto-start', 'Izinkan mulai otomatis');
+  String get stepAutostartDesc => _t(
+        'Brings AntiDoom back after you close it or restart your phone. Find AntiDoom in the list and switch it on.',
+        'Agar AntiDoom jalan lagi setelah ditutup atau HP dinyalakan ulang. Cari AntiDoom di daftar lalu nyalakan.',
+      );
+  String get stepPopupTitle =>
+      _t('Allow background pop-ups', 'Izinkan pop-up di latar belakang');
+  // HyperOS calls it "Open new windows while running in the background";
+  // older MIUI says "Display pop-up windows…". Both live under Other permissions.
+  String get stepPopupDesc => _t(
+        'Lets the break screen open AntiDoom while another app is open. Under "Other permissions", allow opening new windows (pop-ups) while running in the background.',
+        'Agar layar istirahat bisa membuka AntiDoom saat app lain sedang terbuka. Di "Izin lainnya", izinkan membuka jendela baru (pop-up) saat berjalan di latar belakang.',
+      );
+  String get oemConfirmTitle => _t('Did you switch it on?', 'Sudah dinyalakan?');
+  String get oemConfirmBody => _t(
+        "Your phone doesn't let AntiDoom check this setting, so we'll take your word for it.",
+        'HP kamu tidak mengizinkan AntiDoom mengecek pengaturan ini, jadi kami ikut jawabanmu.',
+      );
+  String get oemConfirmYes => _t("Yes, it's on", 'Sudah');
+  String get oemConfirmNo => _t('Not yet', 'Belum');
+  String get oemOpenFailed => _t(
+        "Couldn't open that screen. Open Settings > Apps > AntiDoom and look for it there.",
+        'Layar itu tidak bisa dibuka. Buka Pengaturan > Aplikasi > AntiDoom dan cari di sana.',
       );
   String get allowBtn => _t('Allow', 'Izinkan');
   String get doneLabel => _t('Done', 'Selesai');

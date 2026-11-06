@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream
 import com.antidoom.services.AntiDoomAccessibilityService
 import com.antidoom.services.AntiDoomForegroundService
 import com.antidoom.services.OverlayService
+import com.antidoom.utils.OemPermissions
 import com.antidoom.utils.PermissionHelper
 import com.antidoom.utils.TrackerPrefs
 import io.flutter.embedding.android.FlutterActivity
@@ -119,8 +120,21 @@ class MainActivity : FlutterActivity() {
                     }
 
                     "checkPermissions" -> {
-                        val status = PermissionHelper.getPermissionStatusMap(this@MainActivity)
+                        val status = PermissionHelper.getPermissionStatusMap(this@MainActivity) +
+                            OemPermissions.status(this@MainActivity)
                         result.success(status)
+                    }
+
+                    "openOemPermission" -> {
+                        val kind = call.argument<String>("kind") ?: ""
+                        result.success(OemPermissions.open(this@MainActivity, kind))
+                    }
+
+                    "confirmOemPermission" -> {
+                        val kind = call.argument<String>("kind") ?: ""
+                        val granted = call.argument<Boolean>("granted") ?: false
+                        OemPermissions.confirm(applicationContext, kind, granted)
+                        result.success(true)
                     }
 
                     "requestAccessibilityPermission" -> {

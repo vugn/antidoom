@@ -148,9 +148,11 @@ class NativeBridge {
     try {
       final res = await _channel.invokeMethod<Map>('checkPermissions');
       if (res != null) {
+        // accessibility, batteryOptimization, plus the vendor steps from
+        // OemPermissions.kt: autostart/popup with their *Needed/*Checkable flags.
         return {
-          'accessibility': res['accessibility'] as bool? ?? false,
-          'batteryOptimization': res['batteryOptimization'] as bool? ?? false,
+          for (final e in res.entries)
+            if (e.key is String && e.value is bool) e.key as String: e.value as bool,
         };
       }
     } on PlatformException {
@@ -165,6 +167,22 @@ class NativeBridge {
   static Future<void> requestAccessibilityPermission() async {
     try {
       await _channel.invokeMethod('requestAccessibilityPermission');
+    } on PlatformException catch (_) {}
+  }
+
+  /// Opens a vendor screen: `autostart` or `popup` (MIUI). False if none opened.
+  static Future<bool> openOemPermission(String kind) async {
+    try {
+      return await _channel.invokeMethod<bool>('openOemPermission', {'kind': kind}) ?? false;
+    } on PlatformException catch (_) {
+      return false;
+    }
+  }
+
+  /// Records the user's answer for a vendor switch we cannot read.
+  static Future<void> confirmOemPermission(String kind, bool granted) async {
+    try {
+      await _channel.invokeMethod('confirmOemPermission', {'kind': kind, 'granted': granted});
     } on PlatformException catch (_) {}
   }
 
