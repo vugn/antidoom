@@ -694,6 +694,11 @@ class AntiDoomAccessibilityService : AccessibilityService() {
         }
 
         val root = rootInActiveWindow ?: return true
+        // Only a video page counts as the feed; profile, inbox, search and shop
+        // have no view_rootview (see ReelDetector.isTikTokFeed).
+        val pkg = event?.packageName?.toString() ?: root.packageName?.toString() ?: return true
+        val dm = resources.displayMetrics
+        if (!ReelDetector.isTikTokFeed(root, pkg, dm.widthPixels, dm.heightPixels)) return false
         val commentIds = listOf(
             "com.zhiliaoapp.musically:id/comment_list",
             "com.zhiliaoapp.musically:id/comment_container",

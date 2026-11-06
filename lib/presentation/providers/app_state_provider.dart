@@ -353,10 +353,13 @@ final appRepositoryProvider = Provider<AppRepository>((ref) {
 });
 
 /// Real icons/labels of the tracked apps that are installed on this phone.
+/// Every package variant of every supported app (e.g. TikTok is
+/// com.zhiliaoapp.musically in some regions and com.ss.android.ugc.trill in
+/// others), so "Not installed" only shows when no variant is on the phone.
 final installedAppsProvider = FutureProvider<Map<String, InstalledApp>>((ref) {
-  return NativeBridge.getAppInfo(
-    AppConstants.defaultTrackedApps.map((a) => a['package']!).toList(),
-  );
+  return NativeBridge.getAppInfo([
+    for (final app in SocialApp.all) ...app.packages,
+  ]);
 });
 
 final appStateProvider = NotifierProvider<AppStateNotifier, AppState>(() {

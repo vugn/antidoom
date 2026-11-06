@@ -95,7 +95,8 @@ Once a fingerprint has been read successfully in an app, the fallback is turned 
 
 - If the caption can't be read and only the creator name is available, two different videos from the same creator on the same day can be treated as one.
 - Element IDs and labels can change when the target app updates. Check the `AntiDoomDetect` log in a debug build, then update the ID/label lists in `ReelDetector.kt`.
-- Fingerprinting supports YouTube Shorts, Instagram Reels, TikTok and Facebook Reels. TikTok and Facebook have not been tested on a device yet.
+- Fingerprinting supports YouTube Shorts, Instagram Reels, TikTok and Facebook Reels. Facebook has not been tested on a device yet.
+- TikTok reads the video page directly: the visible `<package>:id/view_rootview` that covers the screen centre, the creator from `:id/title` (a display name, no "@") and the caption from `:id/desc` (cut at the "…more" tail). Without a `view_rootview` on screen (profile, inbox, search, shop) TikTok is not treated as a feed. Tested on TikTok 47.6.3 (`com.ss.android.ugc.trill`) on Xiaomi HyperOS 3: 10 swipes counted 10, scrolling back and the comments sheet counted nothing.
 
 ## Debugging
 

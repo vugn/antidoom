@@ -111,11 +111,70 @@ object ReelDetector {
         " seconds of ", " second of ", " minutes of ", " minute of ", " detik dari ", " menit dari ",
     )
 
+    /**
+     * TikTok's video page (checked on 47.6.3, `trill` and `musically`): the
+     * pager holds one `view_rootview` per video, the creator is in `title`
+     * (a display name, no "@") and the caption in `desc`. Reading those ids
+     * avoids the side buttons ("Add or remove this video from Favorites." is
+     * the same on every video), which used to win the generic scan.
+     */
+    private fun tikTokPage(root: AccessibilityNodeInfo, pkg: String, screenW: Int, screenH: Int): AccessibilityNodeInfo? {
+        val bounds = Rect()
+        return safeFind(root, "$pkg:id/view_rootview").firstOrNull { node ->
+            if (!node.isVisibleToUser) return@firstOrNull false
+            node.getBoundsInScreen(bounds)
+            screenW <= 0 || bounds.contains(screenW / 2, screenH / 2)
+        }
+    }
+
+    /** True when a TikTok video page is on screen (not profile, inbox, search, shop). */
+    fun isTikTokFeed(root: AccessibilityNodeInfo, pkg: String, screenW: Int, screenH: Int): Boolean =
+        tikTokPage(root, pkg, screenW, screenH) != null
+
+    private fun visibleText(scope: AccessibilityNodeInfo, id: String): String? =
+        safeFind(scope, id).firstOrNull { it.isVisibleToUser }
+            ?.let { (it.text ?: it.contentDescription)?.toString() }
+            ?.replace('\n', ' ')?.trim()
+            ?.takeIf { it.isNotEmpty() }
+
+    private fun detectTikTok(root: AccessibilityNodeInfo, pkg: String, screenW: Int, screenH: Int): Result {
+        val page = tikTokPage(root, pkg, screenW, screenH) ?: return Result.NoKey
+        val creator = visibleText(page, "$pkg:id/title")
+            ?.let { "@" + it.lowercase(Locale.ROOT).replace(Regex("""\s+"""), "") }
+        val caption = visibleText(page, "$pkg:id/desc")?.let { captionKey(it) }
+        if (creator == null && caption == null) {
+            // Ads, LIVE previews and odd layouts: fall back to the generic scan of this page only.
+            return scan(page, screenW, screenH)
+        }
+        val all = listOfNotNull(creator, caption)
+        return Result.Reel(all.joinToString("|") { hash(it) }, all.joinToString("|"))
+    }
+
+    /**
+     * Caption without the parts that change while you watch: the "…more" /
+     * "See translation" tail, counters and spacing. Prefix only, so an expanded
+     * caption keeps the same key.
+     */
+    private fun captionKey(text: String): String? {
+        val cut = text.split('…', '\u2026').first()
+            .replace("\u2060", "")
+            .lowercase(Locale.ROOT)
+        val norm = NUMBER.replace(cut, "#").replace(Regex("""\s+"""), " ").trim()
+        if (LETTER.findAll(norm).count() < 3) return null
+        return norm.take(PART_LEN)
+    }
+
     fun detect(root: AccessibilityNodeInfo, pkg: String, screenW: Int, screenH: Int): Result {
         if (isPaused(root, pkg)) return Result.Paused
+        if (pkg in TIKTOK) return detectTikTok(root, pkg, screenW, screenH)
         val scope = SCOPE_IDS[pkg]?.firstNotNullOfOrNull { id ->
             safeFind(root, id).firstOrNull { it.isVisibleToUser }
         } ?: root
+        return scan(scope, screenW, screenH)
+    }
+
+    /** Generic fingerprint: creator handle + the longest caption-like text in [scope]. */
+    private fun scan(scope: AccessibilityNodeInfo, screenW: Int, screenH: Int): Result {
 
         val screen = Rect(0, 0, screenW, screenH)
         var handle: String? = null
