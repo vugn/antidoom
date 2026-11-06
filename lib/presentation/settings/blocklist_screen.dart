@@ -214,14 +214,6 @@ class BlocklistScreen extends ConsumerWidget {
                             NativeBridge.previewCounter(counts[_previewStep]);
                           },
                         ),
-                      if (kDebugMode)
-                        ListRow(
-                          leading: IconTile(
-                              icon: CupertinoIcons.hand_draw_fill, color: p.text2),
-                          title: s.simulateSwipe,
-                          onTap: () =>
-                              notifier.simulateScroll('com.instagram.android'),
-                        ),
                     ],
                   ),
                 ),

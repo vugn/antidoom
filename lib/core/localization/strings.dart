@@ -54,7 +54,6 @@ class S {
   String get allSet => _t('All set', 'Lengkap');
   String get needsAction => _t('Needs action', 'Perlu tindakan');
   String get previewBreak => _t('Preview break screen', 'Lihat layar istirahat');
-  String get simulateSwipe => _t('Simulate a swipe', 'Simulasi swipe');
   String get general => _t('General', 'Umum');
   String get privacyNote => _t(
         'Everything stays on your phone. AntiDoom never reads your messages or uploads anything.',
@@ -269,6 +268,29 @@ class S {
         'Pembelian gagal. Ketuk untuk coba lagi.',
       );
   String get restorePurchase => _t('Restore purchase', 'Pulihkan pembelian');
+
+  // Occasional thank-you (Google Play build)
+  String get thanksTitle => _t('Thanks for using AntiDoom', 'Terima kasih sudah pakai AntiDoom');
+  String get thanksBody => _t(
+        "AntiDoom is free and open source, built by one person. If it's helping you look up more often, you can chip in. Totally optional.",
+        'AntiDoom gratis dan open source, dibuat oleh satu orang. Kalau AntiDoom membantumu lebih sering lihat sekitar, kamu bisa ikut dukung. Sepenuhnya opsional.',
+      );
+  String thanksSupport(String? price) => price == null
+      ? _t('Support AntiDoom', 'Dukung AntiDoom')
+      : _t('Support AntiDoom · $price', 'Dukung AntiDoom · $price');
+  String thanksRemoveAds(String? price) =>
+      price == null ? _t('Remove ads', 'Hapus iklan') : _t('Remove ads · $price', 'Hapus iklan · $price');
+  String get thanksLater => _t('Not now, keep using AntiDoom', 'Nanti saja, lanjut pakai AntiDoom');
+  String get thanksFreeNote => _t(
+        'Counting, check-ins and blocks stay free for everyone.',
+        'Menghitung, check-in, dan blokir tetap gratis untuk semua.',
+      );
+  String get thanksDoneTitle => _t('You made our day', 'Kamu bikin hari kami');
+  String get thanksDoneBody => _t(
+        'Thank you for supporting AntiDoom. Now go look up.',
+        'Terima kasih sudah mendukung AntiDoom. Sekarang, yuk lihat sekitar.',
+      );
+  String get thanksDoneClose => _t('Back to AntiDoom', 'Kembali ke AntiDoom');
 }
 
 extension StringsContext on BuildContext {

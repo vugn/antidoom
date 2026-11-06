@@ -170,6 +170,11 @@ class AppStateNotifier extends Notifier<AppState> {
       currentActivePackage: native['activePackage'] as String?,
       currentSessionScrolls: (native['sessionScrollCount'] as num?)?.toInt() ?? 0,
       snoozedToday: native['snoozedToday'] as bool? ?? false,
+      // The switch lives natively. Without reading it back, the app started
+      // with "on" every launch and the next config push (limit, rule,
+      // language, protection) silently turned the counter back on.
+      isFloatingCounterEnabled:
+          native['showFloatingCounter'] as bool? ?? state.isFloatingCounterEnabled,
       stats: stats,
     );
     await _repository.saveTodayStats(stats);

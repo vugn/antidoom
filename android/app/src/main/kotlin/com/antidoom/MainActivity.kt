@@ -205,7 +205,8 @@ class MainActivity : FlutterActivity() {
                                 "sessionScrollCount" to svc.sessionScrollCount,
                                 "scrollThreshold" to svc.scrollThreshold,
                                 "timeThresholdSeconds" to svc.timeThresholdSeconds,
-                                "showFloatingCounter" to svc.showFloatingCounter,
+                                // From prefs: the service field is only loaded once the service connects.
+                                "showFloatingCounter" to TrackerPrefs.loadConfig(applicationContext).showFloating,
                                 "todayScrollCount" to stats.scrolls,
                                 "todayInterventions" to stats.interventions,
                                 "perAppScrolls" to stats.perApp,

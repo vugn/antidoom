@@ -12,6 +12,7 @@ import '../../services/monetization/monetization.dart';
 import '../settings/blocklist_screen.dart';
 import '../widgets/glass_widgets.dart';
 import '../widgets/brand.dart';
+import '../widgets/thank_you_sheet.dart';
 
 /// Home: one ring (swipes in a row vs. the limit), one switch, today's numbers.
 class DashboardScreen extends ConsumerWidget {
@@ -119,15 +120,25 @@ class DashboardScreen extends ConsumerWidget {
                             children: [
                               bigNumber(context, '$today', size: 76),
                               const SizedBox(height: 2),
+                              // Kept inside the ring: longer translations
+                              // ("Check-in berikutnya di 100") wrap to two
+                              // centred lines instead of running past it.
                               if (ringSub.isNotEmpty)
-                              Text(
-                                ringSub,
-                                style: TextStyle(
-                                  color: p.text2,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w600,
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 164),
+                                  child: Text(
+                                    ringSub,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: p.text2,
+                                      fontSize: 16,
+                                      height: 1.2,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
-                              ),
                               const SizedBox(height: 2),
                               Text(
                                 s.swipesTodayCaption,
@@ -368,6 +379,9 @@ class DashboardScreen extends ConsumerWidget {
                 ],
               ),
             ),
+
+            // ---- Occasional thank-you (play build only, never required)
+            const ThankYouGate(),
 
             // ---- Floating glass top bar
             Positioned(

@@ -17,7 +17,7 @@ import 'monetization.dart';
 /// Ads never appear in the counter overlay or a check-in: those moments are
 /// the product, and an ad there would work against it. Nothing that counts or
 /// blocks is ever sold.
-class PlayMonetization extends Monetization {
+class PlayMonetization extends Monetization with WidgetsBindingObserver {
   PlayMonetization() : super.base();
 
   static const _prefsAdsRemoved = 'ads_removed';
@@ -38,6 +38,10 @@ class PlayMonetization extends Monetization {
   bool _canRequestAds = false;
   PurchaseState _state = PurchaseState.idle;
   StoreProduct? _active;
+
+  /// True once Google Play itself reported a pending purchase (slow payment
+  /// methods). Our own "pending" from [buy] is only a guess until then.
+  bool _storePending = false;
 
   @override
   bool get hasStore => true;
@@ -61,6 +65,7 @@ class PlayMonetization extends Monetization {
     _adsRemoved = prefs.getBool(_prefsAdsRemoved) ?? false;
     _supporter = prefs.getBool(_prefsSupporter) ?? false;
     notifyListeners();
+    WidgetsBinding.instance.addObserver(this);
 
     try {
       _sub = _iap.purchaseStream.listen(
@@ -114,20 +119,37 @@ class PlayMonetization extends Monetization {
   Future<void> _onPurchases(List<PurchaseDetails> purchases) async {
     for (final p in purchases) {
       final product = StoreProduct.fromId(p.productID);
-      if (product == null) continue;
+      if (product == null) {
+        // Google Play reports a cancelled or failed purchase flow with an
+        // empty product id, so it can't be matched to a product. Without
+        // this the button stayed on "Waiting for Google Play" for good.
+        if (p.status == PurchaseStatus.canceled) {
+          _active = null;
+          _storePending = false;
+          _setState(PurchaseState.idle);
+        } else if (p.status == PurchaseStatus.error) {
+          _storePending = false;
+          _setState(PurchaseState.error);
+        }
+        continue;
+      }
       switch (p.status) {
         case PurchaseStatus.pending:
           _active = product;
+          _storePending = true;
           _setState(PurchaseState.pending);
         case PurchaseStatus.purchased:
         case PurchaseStatus.restored:
           await _grant(product);
+          _storePending = false;
           if (_active == product) _active = null;
           _setState(PurchaseState.idle);
         case PurchaseStatus.error:
           _active = product;
+          _storePending = false;
           _setState(PurchaseState.error);
         case PurchaseStatus.canceled:
+          _storePending = false;
           if (_active == product) _active = null;
           _setState(PurchaseState.idle);
       }
@@ -148,6 +170,20 @@ class PlayMonetization extends Monetization {
         await prefs.setBool(_prefsSupporter, true);
     }
     notifyListeners();
+  }
+
+  /// Back from the Google Play sheet: if Play never reported anything (the
+  /// sheet was dismissed in a way that sends no event), unlock the buttons.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    if (_state != PurchaseState.pending || _storePending) return;
+    Future.delayed(const Duration(seconds: 2), () {
+      if (_state == PurchaseState.pending && !_storePending) {
+        _active = null;
+        _setState(PurchaseState.idle);
+      }
+    });
   }
 
   void _setState(PurchaseState s) {
@@ -189,6 +225,7 @@ class PlayMonetization extends Monetization {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _sub?.cancel();
     super.dispose();
   }
