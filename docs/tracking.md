@@ -95,7 +95,11 @@ Once a fingerprint has been read successfully in an app, the fallback is turned 
 
 - If the caption can't be read and only the creator name is available, two different videos from the same creator on the same day can be treated as one.
 - Element IDs and labels can change when the target app updates. Check the `AntiDoomDetect` log in a debug build, then update the ID/label lists in `ReelDetector.kt`.
-- Fingerprinting supports YouTube Shorts, Instagram Reels, TikTok and Facebook Reels. Facebook has not been tested on a device yet.
+- Fingerprinting supports YouTube Shorts, Instagram Reels, TikTok and Facebook Reels, all tested on a Xiaomi (HyperOS 3, Android 16) in November 2026.
+- YouTube also covers modified builds (Morphe, ReVanced, ReVanced Extended, Vanced and any other `*.android.youtube` package, see `YouTubeApps.kt`). Their view ids use their own package as the prefix (`app.morphe.android.youtube:id/reel_recycler`), so every Shorts id is built from the package on screen.
+- Facebook 585 strips view ids (`(name removed)`). The reel page is the node described "Reels tab details" that covers the screen centre (on Home the same node sits off-screen to the right); the creator comes from "View X's reels" / "Follow X" and the caption from that node's parent description. Indonesian labels are guessed, not yet checked on a device.
+- Instagram only fingerprints inside a visible `clips_viewer_view_pager`, so profile pages never count as a reel.
+- The floating counter shows only in a short-video feed. When the screen reads "not a feed" twice, 0.7 s apart, it hides (profile, DMs, search, account switcher, Home), and it comes back when the feed does.
 - TikTok reads the video page directly: the visible `<package>:id/view_rootview` that covers the screen centre, the creator from `:id/title` (a display name, no "@") and the caption from `:id/desc` (cut at the "…more" tail). Without a `view_rootview` on screen (profile, inbox, search, shop) TikTok is not treated as a feed. Tested on TikTok 47.6.3 (`com.ss.android.ugc.trill`) on Xiaomi HyperOS 3: 10 swipes counted 10, scrolling back and the comments sheet counted nothing.
 
 ## Debugging

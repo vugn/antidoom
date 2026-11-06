@@ -35,7 +35,15 @@ class SocialApp {
   static const youtube = SocialApp(
     id: 'youtube',
     name: 'YouTube',
-    packages: ['com.google.android.youtube'],
+    // Official app plus modified builds (Morphe, ReVanced, ReVanced Extended,
+    // Vanced). Keep in sync with YouTubeApps.kt.
+    packages: [
+      'com.google.android.youtube',
+      'app.morphe.android.youtube',
+      'app.revanced.android.youtube',
+      'app.rvx.android.youtube',
+      'com.vanced.android.youtube',
+    ],
     logo: 'assets/images/apps/youtube.png',
   );
   static const x = SocialApp(

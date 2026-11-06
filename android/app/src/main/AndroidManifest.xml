@@ -80,6 +80,10 @@
         <package android:name="com.zhiliaoapp.musically" />
         <package android:name="com.ss.android.ugc.trill" />
         <package android:name="com.google.android.youtube" />
+        <package android:name="app.morphe.android.youtube" />
+        <package android:name="app.revanced.android.youtube" />
+        <package android:name="app.rvx.android.youtube" />
+        <package android:name="com.vanced.android.youtube" />
         <package android:name="com.twitter.android" />
         <package android:name="com.facebook.katana" />
         <!-- Vendor auto-start / background pop-up screens (utils/OemPermissions.kt) -->

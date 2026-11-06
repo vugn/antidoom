@@ -38,7 +38,11 @@ object ReelDetector {
     private const val MAX_PARTS = 4
 
     /** Apps whose feed is one full-screen video at a time. */
-    fun supports(pkg: String): Boolean = pkg == YT || pkg == IG || pkg == FB || pkg in TIKTOK
+    fun supports(pkg: String): Boolean = YouTubeApps.isYouTube(pkg) || pkg == IG || pkg == FB || pkg in TIKTOK
+
+    /** YouTube builds share one id list, with their own package as the id prefix. */
+    private fun forPkg(map: Map<String, List<String>>, pkg: String): List<String>? =
+        if (YouTubeApps.isYouTube(pkg)) map[YT]?.map { it.replaceFirst("$YT:", "$pkg:") } else map[pkg]
 
     private val PAUSE_IDS = mapOf(
         YT to listOf(
@@ -57,6 +61,7 @@ object ReelDetector {
     private val SCOPE_IDS = mapOf(
         YT to listOf(
             "$YT:id/reel_player_page_content",
+            "$YT:id/reel_player_page_container",
             "$YT:id/reel_player_page_view",
         ),
         IG to listOf("$IG:id/clips_viewer_view_pager"),
@@ -105,6 +110,8 @@ object ReelDetector {
     private val CONTAINS_LABELS = listOf(
         "liked this", "menyukai ini", "menyukai reel", "profile picture", "foto profil",
         "sound off", "sound on", "suara mati", "suara nyala", "audio is muted", "double tap",
+        // Instagram's "Translate with AI" button under captions (EN / ID).
+        "translate with ai", "terjemahkan dengan ai", "see translation", "lihat terjemahan",
     )
 
     private val PROGRESS_MARKERS = listOf(
@@ -125,6 +132,67 @@ object ReelDetector {
             node.getBoundsInScreen(bounds)
             screenW <= 0 || bounds.contains(screenW / 2, screenH / 2)
         }
+    }
+
+    /**
+     * Facebook (checked on 585.0.0.47.54) strips view ids ("(name removed)"),
+     * so the reel page is found by its accessibility text: a node described
+     * "Reels tab details" that covers the screen centre. On the Home feed the
+     * same node exists as the next pager page, off to the right, so the centre
+     * test keeps Home from looking like Reels. The caption is the description
+     * of that node's parent; the creator is in "View X's reels" / "Follow X".
+     */
+    private val FB_PAGE_MARKERS = listOf("reels tab details", "detail tab reels", "detail reels")
+    private val FB_CREATOR = listOf(
+        Regex("""^View (.+?)['’]s reels?$""", RegexOption.IGNORE_CASE),
+        Regex("""^Lihat reel (.+)$""", RegexOption.IGNORE_CASE),
+        Regex("""^Follow (.+)$""", RegexOption.IGNORE_CASE),
+        Regex("""^Ikuti (.+)$""", RegexOption.IGNORE_CASE),
+    )
+
+    private fun facebookPage(root: AccessibilityNodeInfo, screenW: Int, screenH: Int): AccessibilityNodeInfo? {
+        val bounds = Rect()
+        val queue = ArrayDeque<AccessibilityNodeInfo>()
+        queue.add(root)
+        var visited = 0
+        while (queue.isNotEmpty() && visited < MAX_NODES) {
+            val node = queue.poll() ?: break
+            visited++
+            if (!node.isVisibleToUser) continue
+            val desc = node.contentDescription?.toString()?.lowercase(Locale.ROOT)
+            if (desc != null && FB_PAGE_MARKERS.any { desc == it }) {
+                node.getBoundsInScreen(bounds)
+                if (screenW <= 0 || bounds.contains(screenW / 2, screenH / 2)) return node
+            }
+            for (i in 0 until node.childCount) node.getChild(i)?.let(queue::add)
+        }
+        return null
+    }
+
+    /** True when a Facebook reel fills the screen (not Home, Friends, Marketplace...). */
+    fun isFacebookFeed(root: AccessibilityNodeInfo, screenW: Int, screenH: Int): Boolean =
+        facebookPage(root, screenW, screenH) != null
+
+    private fun detectFacebook(root: AccessibilityNodeInfo, screenW: Int, screenH: Int): Result {
+        val page = facebookPage(root, screenW, screenH) ?: return Result.NoKey
+        var creator: String? = null
+        val queue = ArrayDeque<AccessibilityNodeInfo>()
+        queue.add(page)
+        var visited = 0
+        while (queue.isNotEmpty() && visited < MAX_NODES && creator == null) {
+            val node = queue.poll() ?: break
+            visited++
+            val desc = node.contentDescription?.toString()?.trim()
+            if (desc != null) {
+                creator = FB_CREATOR.firstNotNullOfOrNull { it.find(desc)?.groupValues?.get(1) }
+            }
+            for (i in 0 until node.childCount) node.getChild(i)?.let(queue::add)
+        }
+        val creatorKey = creator?.let { "@" + it.lowercase(Locale.ROOT).replace(Regex("""\s+"""), "") }
+        val caption = page.parent?.contentDescription?.toString()?.let { captionKey(it) }
+        if (creatorKey == null && caption == null) return scan(page, screenW, screenH)
+        val all = listOfNotNull(creatorKey, caption)
+        return Result.Reel(all.joinToString("|") { hash(it) }, all.joinToString("|"))
     }
 
     /** True when a TikTok video page is on screen (not profile, inbox, search, shop). */
@@ -167,10 +235,15 @@ object ReelDetector {
     fun detect(root: AccessibilityNodeInfo, pkg: String, screenW: Int, screenH: Int): Result {
         if (isPaused(root, pkg)) return Result.Paused
         if (pkg in TIKTOK) return detectTikTok(root, pkg, screenW, screenH)
-        val scope = SCOPE_IDS[pkg]?.firstNotNullOfOrNull { id ->
+        if (pkg == FB) return detectFacebook(root, screenW, screenH)
+        val scope = forPkg(SCOPE_IDS, pkg)?.firstNotNullOfOrNull { id ->
             safeFind(root, id).firstOrNull { it.isVisibleToUser }
-        } ?: root
-        return scan(scope, screenW, screenH)
+        }
+        // Instagram: no visible Reels pager means this isn't a reel (profile,
+        // DMs, feed). Reading the whole screen there would turn a profile into
+        // a "video" (the name + "unread notifications").
+        if (scope == null && pkg == IG) return Result.NoKey
+        return scan(scope ?: root, screenW, screenH)
     }
 
     /** Generic fingerprint: creator handle + the longest caption-like text in [scope]. */
@@ -239,7 +312,7 @@ object ReelDetector {
     }
 
     private fun isPaused(root: AccessibilityNodeInfo, pkg: String): Boolean {
-        val ids = PAUSE_IDS[pkg] ?: if (pkg in TIKTOK) TIKTOK_PAUSE_SUFFIXES.map { pkg + it } else return false
+        val ids = forPkg(PAUSE_IDS, pkg) ?: if (pkg in TIKTOK) TIKTOK_PAUSE_SUFFIXES.map { pkg + it } else return false
         return ids.any { id -> safeFind(root, id).any { it.isVisibleToUser } }
     }
 

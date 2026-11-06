@@ -72,6 +72,8 @@ class AntiDoomAccessibilityService : AccessibilityService() {
         // How many recent videos to remember so scrolling back doesn't recount.
         private const val RECENT_KEYS = 40
         private const val TAG = "AntiDoomDetect"
+        // How long the screen must keep reading "not a feed" before the counter hides.
+        private const val EXIT_CHECK_DELAY_MS = 700L
 
         /**
          * Resets the unified session: scroll counter, timer, interceptor flag and
@@ -128,6 +130,51 @@ class AntiDoomAccessibilityService : AccessibilityService() {
     private val scanRunnable = Runnable {
         scanScheduled = false
         scanCurrentReel()
+    }
+
+    /**
+     * Leaving the feed (profile, DMs, search, account switcher...): the screen
+     * read "not a video feed" once, so re-read it shortly after and hide the
+     * counter if it still isn't. One read alone is not enough: while a video
+     * loads or during a fling the feed can briefly look empty.
+     */
+    private var exitCheckPkg: String? = null
+    private val exitCheckRunnable = Runnable {
+        val pkg = exitCheckPkg ?: return@Runnable
+        exitCheckPkg = null
+        // Only the feed state matters here, not currentActivePackage: a stray
+        // window event from another package can clear that while we're still
+        // in the app, and the counter would then never hide.
+        if (!isCurrentlyInTargetMode) {
+            if (isDebuggable) Log.d(TAG, "exit check [$pkg]: already left")
+            return@Runnable
+        }
+        val root = findRoot(pkg) ?: run {
+            if (isDebuggable) Log.d(TAG, "exit check [$pkg]: screen unreadable, keep counter")
+            return@Runnable
+        }
+        val still = isTargetShortVideoMode(pkg, null, root)
+        if (isDebuggable) Log.d(TAG, "exit check [$pkg]: still in feed=$still")
+        if (still) return@Runnable
+        leaveTargetMode()
+    }
+
+    private fun scheduleExitCheck(pkg: String) {
+        if (exitCheckPkg == pkg) return
+        exitCheckPkg = pkg
+        handler.postDelayed(exitCheckRunnable, EXIT_CHECK_DELAY_MS)
+    }
+
+    private fun cancelExitCheck() {
+        exitCheckPkg = null
+        handler.removeCallbacks(exitCheckRunnable)
+    }
+
+    private fun leaveTargetMode() {
+        cancelExitCheck()
+        isCurrentlyInTargetMode = false
+        currentTargetModeName = null
+        if (showFloatingCounter) OverlayService.hideCounter(this)
     }
     private val isDebuggable by lazy {
         (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
@@ -374,9 +421,11 @@ class AntiDoomAccessibilityService : AccessibilityService() {
         }
 
         val inTarget = isTargetShortVideoMode(packageName, event)
+        if (inTarget) cancelExitCheck()
 
         if (inTarget && !isCurrentlyInTargetMode) {
             // User entered targeted short video mode (e.g. opened YouTube Shorts or Instagram Reels)
+            if (currentActivePackage == null) currentActivePackage = packageName
             isCurrentlyInTargetMode = true
             currentTargetModeName = getReadableTargetName(packageName)
             // Entry grace: the Reels/Shorts slide-in animation emits scroll events
@@ -389,15 +438,15 @@ class AntiDoomAccessibilityService : AccessibilityService() {
             // Already over the hard limit: block as soon as the feed opens
             if (isBlockedToday()) showBlock()
         } else if (!inTarget && isCurrentlyInTargetMode) {
-            // User might have left short video mode (e.g. navigated back to Home/Beranda or Search)
-            // BUT: only exit target mode if we have positive confirmation they left (e.g. Home feed detected),
-            // NOT when rootInActiveWindow is temporarily null or unreadable during touch/video loading!
+            // Probably left the feed (home, profile, DMs, search, account switcher).
+            // A known home screen hides the counter right away; anything else is
+            // re-checked shortly, so a loading video never makes it flicker.
             if (isConfirmedOutsideShortVideo(packageName)) {
-                isCurrentlyInTargetMode = false
-                currentTargetModeName = null
-                if (showFloatingCounter) {
-                    OverlayService.hideCounter(this)
-                }
+                if (isDebuggable) Log.d(TAG, "left feed [$packageName]: home screen")
+                leaveTargetMode()
+            } else {
+                if (isDebuggable) Log.v(TAG, "maybe left feed [$packageName]: re-check")
+                scheduleExitCheck(packageName)
             }
         }
     }
@@ -419,6 +468,7 @@ class AntiDoomAccessibilityService : AccessibilityService() {
         // If not already marked as in target mode, check if this event itself indicates entering Shorts/Reels
         if (!isCurrentlyInTargetMode) {
             if (isTargetShortVideoMode(packageName, event)) {
+                if (currentActivePackage == null) currentActivePackage = packageName
                 isCurrentlyInTargetMode = true
                 currentTargetModeName = getReadableTargetName(packageName)
                 targetModeEnterTime = now
@@ -539,12 +589,16 @@ class AntiDoomAccessibilityService : AccessibilityService() {
         )
     }
 
-    private fun isTargetShortVideoMode(packageName: String, event: AccessibilityEvent?): Boolean {
+    private fun isTargetShortVideoMode(
+        packageName: String,
+        event: AccessibilityEvent?,
+        root: AccessibilityNodeInfo? = null,
+    ): Boolean {
+        if (YouTubeApps.isYouTube(packageName)) return isYouTubeShorts(event, root, packageName)
         return when (packageName) {
-            "com.google.android.youtube" -> isYouTubeShorts(event)
-            "com.instagram.android" -> isInstagramReels(event)
-            "com.facebook.katana" -> isFacebookReels(event)
-            "com.zhiliaoapp.musically", "com.ss.android.ugc.trill" -> isTikTokVideoFeed(event)
+            "com.instagram.android" -> isInstagramReels(event, root)
+            "com.facebook.katana" -> isFacebookReels(event, root)
+            "com.zhiliaoapp.musically", "com.ss.android.ugc.trill" -> isTikTokVideoFeed(event, root, packageName)
             "com.twitter.android" -> true // Twitter timeline
             else -> true
         }
@@ -553,52 +607,54 @@ class AntiDoomAccessibilityService : AccessibilityService() {
     private fun isConfirmedOutsideShortVideo(packageName: String): Boolean {
         val root = rootInActiveWindow ?: return false // If root is null during fling, do not assume left!
 
+        if (YouTubeApps.isYouTube(packageName)) {
+            // Check if Home or Subscriptions tab is selected
+            val homeTabs = root.findAccessibilityNodeInfosByText("Home") +
+                    root.findAccessibilityNodeInfosByText("Beranda")
+            val isHomeTabSelected = homeTabs.any { it.isSelected || (it.parent?.isSelected == true) }
+
+            val subsTabs = root.findAccessibilityNodeInfosByText("Subscriptions") +
+                    root.findAccessibilityNodeInfosByText("Subscription") +
+                    root.findAccessibilityNodeInfosByText("Koleksi")
+            val isSubsTabSelected = subsTabs.any { it.isSelected || (it.parent?.isSelected == true) }
+
+            val filterNodes = root.findAccessibilityNodeInfosByViewId(YouTubeApps.id(packageName, "feed_filter_bar"))
+            val isFilterBarVisible = filterNodes.any { it.isVisibleToUser }
+
+            return (isHomeTabSelected || isSubsTabSelected || isFilterBarVisible) &&
+                !isYouTubeShorts(null, root, packageName)
+        }
+
         return when (packageName) {
-            "com.google.android.youtube" -> {
-                // Check if Home or Subscriptions tab is selected
-                val homeTabs = root.findAccessibilityNodeInfosByText("Home") +
-                        root.findAccessibilityNodeInfosByText("Beranda")
-                val isHomeTabSelected = homeTabs.any { it.isSelected || (it.parent?.isSelected == true) }
-
-                val subsTabs = root.findAccessibilityNodeInfosByText("Subscriptions") +
-                        root.findAccessibilityNodeInfosByText("Subscription") +
-                        root.findAccessibilityNodeInfosByText("Koleksi")
-                val isSubsTabSelected = subsTabs.any { it.isSelected || (it.parent?.isSelected == true) }
-
-                val filterNodes = root.findAccessibilityNodeInfosByViewId("com.google.android.youtube:id/feed_filter_bar")
-                val isFilterBarVisible = filterNodes.any { it.isVisibleToUser }
-
-                (isHomeTabSelected || isSubsTabSelected || isFilterBarVisible) && !isYouTubeShorts(null)
-            }
             "com.instagram.android" -> {
                 val mainFeedNodes = root.findAccessibilityNodeInfosByViewId("com.instagram.android:id/main_feed") +
                         root.findAccessibilityNodeInfosByViewId("com.instagram.android:id/feed_recycler_view")
                 val hasVisibleMainFeed = mainFeedNodes.any { it.isVisibleToUser }
                 hasVisibleMainFeed && !isInstagramReels(null)
             }
-            "com.facebook.katana" -> {
-                val hasReels = !root.findAccessibilityNodeInfosByViewId("com.facebook.katana:id/reel_viewer").isNullOrEmpty() ||
-                        !root.findAccessibilityNodeInfosByViewId("com.facebook.katana:id/fb_shorts").isNullOrEmpty()
-                !hasReels
-            }
+            // The old reel_viewer / fb_shorts ids no longer exist, which made every
+            // Facebook screen look "outside Reels". No instant exit here: the
+            // debounced exit check (EXIT_CHECK_DELAY_MS) decides.
+            "com.facebook.katana" -> false
             else -> false
         }
     }
 
-    private fun isYouTubeShorts(event: AccessibilityEvent?): Boolean {
-        // 1. Direct event check (viewId, className, contentDescription)
-        val sourceRes = event?.source?.viewIdResourceName?.lowercase() ?: ""
-        if ((sourceRes.contains("shorts") || sourceRes.contains("reel")) && !sourceRes.contains("shorts_shelf")) {
-            return true
+    private fun isYouTubeShorts(
+        event: AccessibilityEvent?,
+        readRoot: AccessibilityNodeInfo? = null,
+        ytPkg: String = YouTubeApps.OFFICIAL,
+    ): Boolean {
+        val root = readRoot ?: findRoot(ytPkg)
+        if (root == null) {
+            // Screen unreadable for a moment: fall back to hints from the event itself.
+            val sourceRes = event?.source?.viewIdResourceName?.lowercase() ?: ""
+            if ((sourceRes.contains("shorts") || sourceRes.contains("reel")) && !sourceRes.contains("shorts_shelf")) {
+                return true
+            }
+            val className = event?.className?.toString()?.lowercase() ?: ""
+            return className.contains("reel") || className.contains("shorts")
         }
-
-        val className = event?.className?.toString()?.lowercase() ?: ""
-        if (className.contains("reel") || className.contains("shorts")) {
-            return true
-        }
-
-        // 2. Active Window Hierarchy check
-        val root = rootInActiveWindow ?: return false
 
         // Check if "Shorts" tab in bottom navigation is selected
         val shortsTabs = root.findAccessibilityNodeInfosByText("Shorts")
@@ -607,17 +663,18 @@ class AntiDoomAccessibilityService : AccessibilityService() {
         }
 
         val shortsViewIds = listOf(
-            "com.google.android.youtube:id/reel_recycler",
-            "com.google.android.youtube:id/shorts_container",
-            "com.google.android.youtube:id/reel_player_page_view",
-            "com.google.android.youtube:id/reel_player",
-            "com.google.android.youtube:id/reel_view_holder",
-            "com.google.android.youtube:id/shorts_video_player",
-            "com.google.android.youtube:id/shorts_player",
-            "com.google.android.youtube:id/reel_watch_fragment",
-            "com.google.android.youtube:id/reel_swipe_indicator",
-            "com.google.android.youtube:id/reel_feed_layout"
-        )
+            "reel_recycler",
+            "reel_player_page_container",
+            "shorts_container",
+            "reel_player_page_view",
+            "reel_player",
+            "reel_view_holder",
+            "shorts_video_player",
+            "shorts_player",
+            "reel_watch_fragment",
+            "reel_swipe_indicator",
+            "reel_feed_layout",
+        ).map { YouTubeApps.id(ytPkg, it) }
         for (id in shortsViewIds) {
             try {
                 val nodes = root.findAccessibilityNodeInfosByViewId(id)
@@ -649,18 +706,16 @@ class AntiDoomAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun isInstagramReels(event: AccessibilityEvent?): Boolean {
-        val sourceRes = event?.source?.viewIdResourceName?.lowercase() ?: ""
-        if (sourceRes.contains("clips") || sourceRes.contains("reel_viewer")) {
-            return true
+    private fun isInstagramReels(event: AccessibilityEvent?, readRoot: AccessibilityNodeInfo? = null): Boolean {
+        val root = readRoot ?: findRoot("com.instagram.android")
+        if (root == null) {
+            // Screen unreadable for a moment: fall back to hints from the event itself.
+            // (Not used when the screen is readable: profile pages have "clips" ids too.)
+            val sourceRes = event?.source?.viewIdResourceName?.lowercase() ?: ""
+            if (sourceRes.contains("clips") || sourceRes.contains("reel_viewer")) return true
+            val className = event?.className?.toString()?.lowercase() ?: ""
+            return className.contains("clips") || className.contains("reel")
         }
-
-        val className = event?.className?.toString()?.lowercase() ?: ""
-        if (className.contains("clips") || className.contains("reel")) {
-            return true
-        }
-
-        val root = rootInActiveWindow ?: return false
         val reelsViewIds = listOf(
             "com.instagram.android:id/clips_viewer_view_pager",
             "com.instagram.android:id/clips_video_container",
@@ -674,6 +729,7 @@ class AntiDoomAccessibilityService : AccessibilityService() {
             try {
                 val nodes = root.findAccessibilityNodeInfosByViewId(id)
                 if (nodes.any { it.isVisibleToUser }) {
+                    if (isDebuggable) Log.v(TAG, "IG reels: visible $id")
                     return true
                 }
             } catch (_: Exception) {}
@@ -682,7 +738,11 @@ class AntiDoomAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun isTikTokVideoFeed(event: AccessibilityEvent?): Boolean {
+    private fun isTikTokVideoFeed(
+        event: AccessibilityEvent?,
+        readRoot: AccessibilityNodeInfo? = null,
+        tikTokPkg: String? = null,
+    ): Boolean {
         val sourceRes = event?.source?.viewIdResourceName?.lowercase() ?: ""
         if (sourceRes.contains("comment") ||
             sourceRes.contains("profile") ||
@@ -693,53 +753,26 @@ class AntiDoomAccessibilityService : AccessibilityService() {
             return false
         }
 
-        val root = rootInActiveWindow ?: return true
+        val pkg = tikTokPkg ?: event?.packageName?.toString() ?: return true
+        val root = readRoot ?: findRoot(pkg) ?: return true
         // Only a video page counts as the feed; profile, inbox, search and shop
         // have no view_rootview (see ReelDetector.isTikTokFeed).
-        val pkg = event?.packageName?.toString() ?: root.packageName?.toString() ?: return true
         val dm = resources.displayMetrics
-        if (!ReelDetector.isTikTokFeed(root, pkg, dm.widthPixels, dm.heightPixels)) return false
-        val commentIds = listOf(
-            "com.zhiliaoapp.musically:id/comment_list",
-            "com.zhiliaoapp.musically:id/comment_container",
-            "com.ss.android.ugc.trill:id/comment_list",
-            "com.ss.android.ugc.trill:id/comment_container"
-        )
-        for (id in commentIds) {
-            try {
-                val nodes = root.findAccessibilityNodeInfosByViewId(id)
-                if (!nodes.isNullOrEmpty()) {
-                    return false
-                }
-            } catch (_: Exception) {}
-        }
-        return true
+        // The comments sheet sits on top of the feed: keep the counter (counting
+        // pauses there anyway, see ReelDetector.isPaused).
+        return ReelDetector.isTikTokFeed(root, pkg, dm.widthPixels, dm.heightPixels)
     }
 
-    private fun isFacebookReels(event: AccessibilityEvent?): Boolean {
-        val sourceRes = event?.source?.viewIdResourceName?.lowercase() ?: ""
-        if (sourceRes.contains("fb_shorts") ||
-            sourceRes.contains("reel_viewer") ||
-            sourceRes.contains("short_video") ||
-            sourceRes.contains("reels_tray")
-        ) {
-            return true
+    private fun isFacebookReels(event: AccessibilityEvent?, readRoot: AccessibilityNodeInfo? = null): Boolean {
+        val root = readRoot ?: findRoot("com.facebook.katana")
+        if (root == null) {
+            // Screen unreadable for a moment: fall back to hints from the event itself.
+            val sourceRes = event?.source?.viewIdResourceName?.lowercase() ?: ""
+            return sourceRes.contains("fb_shorts") || sourceRes.contains("reel_viewer")
         }
-
-        val root = rootInActiveWindow ?: return false
-        val reelsIds = listOf(
-            "com.facebook.katana:id/reel_viewer",
-            "com.facebook.katana:id/fb_shorts"
-        )
-        for (id in reelsIds) {
-            try {
-                val nodes = root.findAccessibilityNodeInfosByViewId(id)
-                if (nodes.any { it.isVisibleToUser }) {
-                    return true
-                }
-            } catch (_: Exception) {}
-        }
-        return false
+        // Facebook strips view ids; ReelDetector finds the reel page by its text.
+        val dm = resources.displayMetrics
+        return ReelDetector.isFacebookFeed(root, dm.widthPixels, dm.heightPixels)
     }
 
     private fun isSystemOverlayPackage(pkg: String): Boolean {
@@ -751,7 +784,9 @@ class AntiDoomAccessibilityService : AccessibilityService() {
     }
 
     private fun isPackageBlocklisted(pkg: String): Boolean {
-        return blocklist.contains(pkg)
+        if (blocklist.contains(pkg)) return true
+        // A modified YouTube (Morphe, ReVanced...) follows the YouTube rule.
+        return YouTubeApps.isYouTube(pkg) && blocklist.contains(YouTubeApps.OFFICIAL)
     }
 
     private fun getReadableTargetName(pkg: String): String {
