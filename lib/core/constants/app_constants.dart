@@ -6,7 +6,7 @@ class AppConstants {
   // Open source
   static const String author = 'vugn';
   static const String copyrightYear = '2026';
-  static const String license = 'MIT';
+  static const String license = 'GPL-3.0';
   static const String githubUrl = 'https://github.com/vugn/antidoom';
   static String get copyright => '© $copyrightYear $author';
 

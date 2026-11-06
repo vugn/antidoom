@@ -11,10 +11,11 @@ import 'data/repositories/app_repository.dart';
 import 'presentation/dashboard/dashboard_screen.dart';
 import 'presentation/onboarding/setup_flow.dart';
 import 'presentation/providers/app_state_provider.dart';
+import 'services/monetization/monetization.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // AntiDoom's own MIT license shows up first on Settings > Licenses.
+  // AntiDoom's own GPL-3.0 license shows up first on Settings > Licenses.
   LicenseRegistry.addLicense(() async* {
     final text = await rootBundle.loadString('LICENSE');
     yield LicenseEntryWithLineBreaks(const ['AntiDoom'], text);
@@ -32,8 +33,14 @@ void main() async {
   final repository = AppRepository();
   final isOnboardingDone = await repository.isOnboardingCompleted();
 
+  // foss: no-op. play: AdMob + "Remove ads". Started without awaiting so the
+  // network (consent, billing) never delays the first frame.
+  final monetization = Monetization.forFlavor();
+  monetization.init();
+
   runApp(
     ProviderScope(
+      overrides: [monetizationProvider.overrideWithValue(monetization)],
       child: AntiDoomApp(isOnboardingDone: isOnboardingDone),
     ),
   );

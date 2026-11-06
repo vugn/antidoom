@@ -51,6 +51,29 @@ android {
         }
     }
 
+    // Two builds from one codebase:
+    //   foss: GitHub/F-Droid. No ads, no purchases, no internet permission.
+    //   play: Google Play. AdMob banner + one "Remove ads" purchase.
+    // Pick one with `flutter run --flavor foss` / `flutter build appbundle --flavor play`.
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("foss") {
+            dimension = "distribution"
+        }
+        create("play") {
+            dimension = "distribution"
+            // AdMob app ID from android/admob.properties (gitignored) or the
+            // ADMOB_APP_ID env var in CI; falls back to Google's public test ID.
+            val admobProperties = Properties()
+            val admobFile = rootProject.file("admob.properties")
+            if (admobFile.exists()) admobFile.inputStream().use { admobProperties.load(it) }
+            manifestPlaceholders["admobAppId"] =
+                (admobProperties["admobAppId"] as String?)
+                    ?: System.getenv("ADMOB_APP_ID")
+                    ?: "ca-app-pub-3940256099942544~3347511713"
+        }
+    }
+
     buildTypes {
         release {
             signingConfig = if (keystorePropertiesFile.exists()) {

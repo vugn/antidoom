@@ -13,6 +13,7 @@ import '../dashboard/dashboard_screen.dart';
 import '../overlay_preview/overlay_preview_dialog.dart';
 import '../../services/native_bridge.dart';
 import '../providers/app_state_provider.dart';
+import '../../services/monetization/monetization.dart';
 import '../widgets/glass_widgets.dart';
 import '../widgets/brand.dart';
 import '../widgets/language_selector_sheet.dart';
@@ -224,6 +225,48 @@ class BlocklistScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+                // ---- Support (play build only)
+                if (ref.watch(monetizationProvider) case final m when m.hasStore)
+                  ListenableBuilder(
+                    listenable: m,
+                    builder: (context, _) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        GroupLabel(s.support),
+                        _pad(
+                          RowList(
+                            children: [
+                              ListRow(
+                                leading: IconTile(
+                                    icon: CupertinoIcons.heart_fill,
+                                    color: m.adsRemoved ? p.accent : p.danger),
+                                title: m.adsRemoved ? s.adsRemovedTitle : s.removeAds,
+                                subtitle: m.adsRemoved
+                                    ? s.adsRemovedDesc
+                                    : switch (m.purchaseState) {
+                                        PurchaseState.pending => s.purchasePending,
+                                        PurchaseState.error => s.purchaseFailed,
+                                        PurchaseState.idle => s.removeAdsDesc(m.removeAdsPrice),
+                                      },
+                                chevron: !m.adsRemoved,
+                                onTap: m.adsRemoved || m.purchaseState == PurchaseState.pending
+                                    ? null
+                                    : m.buyRemoveAds,
+                              ),
+                              if (!m.adsRemoved)
+                                ListRow(
+                                  leading: IconTile(
+                                      icon: CupertinoIcons.arrow_counterclockwise,
+                                      color: p.text2),
+                                  title: s.restorePurchase,
+                                  onTap: m.restorePurchases,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 // ---- About / open source
                 GroupLabel(s.about),
                 _pad(
@@ -274,7 +317,7 @@ class BlocklistScreen extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          s.privacyNote,
+                          ref.watch(monetizationProvider).hasStore ? s.privacyNotePlay : s.privacyNote,
                           style: TextStyle(color: p.text3, fontSize: 13, height: 1.4),
                         ),
                       ),

@@ -60,6 +60,13 @@ class S {
         'Everything stays on your phone. AntiDoom never reads your messages or uploads anything.',
         'Semua data tetap di HP kamu. AntiDoom tidak membaca pesan atau mengunggah apa pun.',
       );
+  /// Play build: the counting is still local, but ads need the network.
+  String get privacyNotePlay => _t(
+        'Your counts stay on your phone and AntiDoom never reads your messages. '
+            'Ads come from Google AdMob and never see what you count.',
+        'Hitunganmu tetap di HP kamu dan AntiDoom tidak membaca pesan. '
+            'Iklan datang dari Google AdMob dan tidak pernah melihat apa yang kamu hitung.',
+      );
 
   // About
   String get about => _t('About', 'Tentang');
@@ -180,6 +187,23 @@ class S {
       );
   String get obPermTitle => _t('Last step: permissions', 'Langkah terakhir: izin');
   String get startBtn => _t('Start AntiDoom', 'Mulai AntiDoom');
+
+  // Support (Google Play build)
+  String get support => _t('Support AntiDoom', 'Dukung AntiDoom');
+  String get removeAds => _t('Remove ads', 'Hapus iklan');
+  String removeAdsDesc(String? price) => price == null
+      ? _t('One-time purchase', 'Sekali bayar')
+      : _t('One-time purchase · $price', 'Sekali bayar · $price');
+  String get adsRemovedTitle => _t('Ads removed', 'Iklan sudah dihapus');
+  String get adsRemovedDesc =>
+      _t('Thanks for supporting AntiDoom.', 'Terima kasih sudah mendukung AntiDoom.');
+  String get purchasePending =>
+      _t('Waiting for Google Play…', 'Menunggu Google Play…');
+  String get purchaseFailed => _t(
+        "That didn't go through. Tap to try again.",
+        'Pembelian gagal. Ketuk untuk coba lagi.',
+      );
+  String get restorePurchase => _t('Restore purchase', 'Pulihkan pembelian');
 }
 
 extension StringsContext on BuildContext {

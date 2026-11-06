@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-green.svg" alt="License"></a>
   <img src="https://img.shields.io/badge/platform-Android-3DDC84.svg" alt="Platform">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter">
   <img src="https://img.shields.io/badge/kotlin-native%20bridge-7F52FF.svg" alt="Kotlin">
@@ -149,7 +149,7 @@ antidoom/
 │   ├── tracking.md                                 # How AntiDoom counts videos
 │   ├── images/banner.png                           # README banner
 │   └── store/                                      # Store screenshots & feature graphic
-├── LICENSE                                         # MIT
+├── LICENSE                                         # GPL-3.0
 └── pubspec.yaml
 ```
 
@@ -175,11 +175,30 @@ flutter pub get
 flutter analyze
 flutter test
 
-# Run on a device
-flutter run
+# Run on a device (pick a flavor, see below)
+flutter run --flavor foss
 ```
 
 To reset onboarding on a device: `adb shell pm clear com.antidoom`.
+
+### Two flavors: `foss` and `play`
+
+One codebase, two builds. Every `flutter run` / `flutter build` needs `--flavor`.
+
+| | `foss` | `play` |
+| :--- | :--- | :--- |
+| Ships on | GitHub Releases (and F-Droid later) | Google Play |
+| Ads | None | One AdMob banner at the bottom of the dashboard, never in the counter or a check-in |
+| Purchases | None | One-time "Remove ads" (`remove_ads`, non-consumable) |
+| Internet permission | None (stripped in `android/app/src/foss/AndroidManifest.xml`) | Yes, for ads and billing |
+
+Contributors only need `foss`; no AdMob or Play Console account is involved. The code lives behind
+`lib/services/monetization/` (`NoopMonetization` for foss, `PlayMonetization` for play).
+
+The `play` flavor uses Google's public **test** ad IDs unless real ones are supplied:
+`android/admob.properties` (gitignored) with `admobAppId=ca-app-pub-…~…`, and
+`--dart-define=ADMOB_BANNER_ID=ca-app-pub-…/…` at build time. The `Play bundle` workflow reads both
+from the `ADMOB_APP_ID` and `ADMOB_BANNER_ID` repository secrets and refuses to build without them.
 
 ---
 
@@ -196,7 +215,9 @@ To reset onboarding on a device: `adb shell pm clear com.antidoom`.
 
 **AntiDoom** is made by [vugn](https://github.com/vugn). Source code: <https://github.com/vugn/antidoom>
 
-Released under the open-source **[MIT License](LICENSE)**. © 2026 vugn.
+Released under the **[GNU GPL v3](LICENSE)**, with an [additional permission](LICENSE-EXCEPTION.md) that lets the Google Play build link Google's ads and billing libraries. © 2026 vugn.
+
+The name "AntiDoom", the logo and the brand files are not covered by the code license; see [TRADEMARK.md](TRADEMARK.md). Forks are welcome under their own name and icon.
 
 Bundled fonts: [Inter](https://github.com/rsms/inter) and [Inter Tight](https://github.com/rsms/inter-tight) by The Inter Project Authors, licensed under the [SIL Open Font License 1.1](assets/fonts/inter/OFL.txt).
 

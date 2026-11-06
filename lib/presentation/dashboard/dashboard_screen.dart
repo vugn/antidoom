@@ -8,6 +8,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_theme.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../providers/app_state_provider.dart';
+import '../../services/monetization/monetization.dart';
 import '../settings/blocklist_screen.dart';
 import '../widgets/glass_widgets.dart';
 import '../widgets/brand.dart';
@@ -70,6 +71,7 @@ class DashboardScreen extends ConsumerWidget {
                 ? p.warning
                 : p.accent;
     final watching = st.rules.where((r) => r.isEnabled).length;
+    final monetization = ref.watch(monetizationProvider);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: _systemStyle(dark),
@@ -356,6 +358,12 @@ class DashboardScreen extends ConsumerWidget {
                             }),
                       ],
                     ),
+                  ),
+
+                  // ---- Ad (play build only; nothing in foss or after "Remove ads")
+                  ListenableBuilder(
+                    listenable: monetization,
+                    builder: (context, _) => monetization.banner(context),
                   ),
                 ],
               ),

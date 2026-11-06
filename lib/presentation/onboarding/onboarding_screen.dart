@@ -7,6 +7,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/native_bridge.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../../services/monetization/monetization.dart';
 import '../providers/app_state_provider.dart';
 import '../widgets/glass_widgets.dart';
 
@@ -135,7 +136,7 @@ class PermissionSteps extends ConsumerWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  s.privacyNote,
+                  ref.watch(monetizationProvider).hasStore ? s.privacyNotePlay : s.privacyNote,
                   style: TextStyle(color: p.text3, fontSize: 13, height: 1.4),
                 ),
               ),

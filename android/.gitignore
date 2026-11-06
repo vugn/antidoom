@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# AdMob app ID for the play flavor (see android/app/build.gradle.kts)
+admob.properties

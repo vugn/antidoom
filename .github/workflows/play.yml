@@ -1,0 +1,73 @@
+name: Play bundle
+
+# Builds the Google Play app bundle (play flavor: AdMob banner + "Remove ads").
+# Runs on version tags next to the GitHub release, or by hand from the Actions tab.
+# The .aab is attached to the run as an artifact; upload it in Play Console.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+          cache: true
+
+      - name: Restore the signing key and AdMob IDs
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
+          ADMOB_BANNER_ID: ${{ secrets.ADMOB_BANNER_ID }}
+        run: |
+          # Refuse to build a store bundle with a debug key or Google's test ad IDs.
+          for v in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_PASSWORD KEY_ALIAS ADMOB_APP_ID ADMOB_BANNER_ID; do
+            [ -n "${!v}" ] || { echo "::error::Secret $v is not set"; exit 1; }
+          done
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+          cat > android/key.properties <<EOF
+          storeFile=$RUNNER_TEMP/upload.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          EOF
+          echo "admobAppId=$ADMOB_APP_ID" > android/admob.properties
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+      - name: Build the app bundle
+        env:
+          ADMOB_BANNER_ID: ${{ secrets.ADMOB_BANNER_ID }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then VERSION="${GITHUB_REF_NAME#v}"; else VERSION="$(grep '^version:' pubspec.yaml | sed 's/version: //; s/+.*//')"; fi
+          flutter build appbundle --release --flavor play \
+            --build-name="$VERSION" --build-number=${{ github.run_number }} \
+            --dart-define=ADMOB_BANNER_ID="$ADMOB_BANNER_ID"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: antidoom-play-aab
+          path: build/app/outputs/bundle/playRelease/app-play-release.aab
+
+      - name: Remove the signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks" android/key.properties android/admob.properties
