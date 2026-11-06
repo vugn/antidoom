@@ -11,14 +11,18 @@ class NoopMonetization extends Monetization {
   @override
   bool get adsRemoved => true;
   @override
-  String? get removeAdsPrice => null;
+  bool get isSupporter => false;
+  @override
+  String? priceOf(StoreProduct product) => null;
   @override
   PurchaseState get purchaseState => PurchaseState.idle;
+  @override
+  StoreProduct? get activeProduct => null;
 
   @override
   Future<void> init() async {}
   @override
-  Future<void> buyRemoveAds() async {}
+  Future<void> buy(StoreProduct product) async {}
   @override
   Future<void> restorePurchases() async {}
 

@@ -53,3 +53,4 @@ brief.md
 totalbrief.md
 *.xapk
 *.apk
+/admob.json

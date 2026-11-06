@@ -244,6 +244,17 @@ class S {
 
   // Support (Google Play build)
   String get support => _t('Support AntiDoom', 'Dukung AntiDoom');
+  String get becomeSupporter => _t('Become a supporter', 'Jadi supporter');
+  String supporterDesc(String? price) => price == null
+      ? _t('One-time · keeps AntiDoom going · no ads', 'Sekali bayar · bantu AntiDoom terus jalan · tanpa iklan')
+      : _t('One-time $price · keeps AntiDoom going · no ads',
+          'Sekali bayar $price · bantu AntiDoom terus jalan · tanpa iklan');
+  String get supporterThanksTitle => _t("You're a supporter", 'Kamu supporter AntiDoom');
+  String get supporterThanksDesc => _t(
+        'Thank you. Ads are gone and you keep this project alive.',
+        'Terima kasih. Iklan sudah hilang dan kamu ikut menjaga project ini tetap hidup.',
+      );
+  String get supporterBadge => _t('Supporter', 'Supporter');
   String get removeAds => _t('Remove ads', 'Hapus iklan');
   String removeAdsDesc(String? price) => price == null
       ? _t('One-time purchase', 'Sekali bayar')

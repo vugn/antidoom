@@ -170,6 +170,15 @@ class NativeBridge {
     } on PlatformException catch (_) {}
   }
 
+  /// The play flavor's AdMob banner unit, set in android/admob.properties.
+  static Future<String?> getAdmobBannerId() async {
+    try {
+      return await _channel.invokeMethod<String>('admobBannerId');
+    } on PlatformException catch (_) {
+      return null;
+    }
+  }
+
   /// Opens a vendor screen: `autostart` or `popup` (MIUI). False if none opened.
   static Future<bool> openOemPermission(String kind) async {
     try {

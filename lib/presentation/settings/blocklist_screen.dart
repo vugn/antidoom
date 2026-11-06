@@ -236,24 +236,39 @@ class BlocklistScreen extends ConsumerWidget {
                         _pad(
                           RowList(
                             children: [
+                              // Supporter: includes removing ads. Shown first, it's the
+                              // bigger way to keep the project going.
                               ListRow(
                                 leading: IconTile(
-                                    icon: CupertinoIcons.heart_fill,
-                                    color: m.adsRemoved ? p.accent : p.danger),
-                                title: m.adsRemoved ? s.adsRemovedTitle : s.removeAds,
-                                subtitle: m.adsRemoved
-                                    ? s.adsRemovedDesc
-                                    : switch (m.purchaseState) {
-                                        PurchaseState.pending => s.purchasePending,
-                                        PurchaseState.error => s.purchaseFailed,
-                                        PurchaseState.idle => s.removeAdsDesc(m.removeAdsPrice),
-                                      },
-                                chevron: !m.adsRemoved,
-                                onTap: m.adsRemoved || m.purchaseState == PurchaseState.pending
+                                    icon: CupertinoIcons.heart_fill, color: p.danger),
+                                title: m.isSupporter ? s.supporterThanksTitle : s.becomeSupporter,
+                                subtitle: m.isSupporter
+                                    ? s.supporterThanksDesc
+                                    : _purchaseLine(s, m, StoreProduct.supporter, s.supporterDesc),
+                                chevron: !m.isSupporter,
+                                onTap: m.isSupporter || m.purchaseState == PurchaseState.pending
                                     ? null
-                                    : m.buyRemoveAds,
+                                    : () => m.buy(StoreProduct.supporter),
                               ),
                               if (!m.adsRemoved)
+                                ListRow(
+                                  leading: IconTile(
+                                      icon: CupertinoIcons.nosign, color: p.text2),
+                                  title: s.removeAds,
+                                  subtitle: _purchaseLine(s, m, StoreProduct.removeAds, s.removeAdsDesc),
+                                  chevron: true,
+                                  onTap: m.purchaseState == PurchaseState.pending
+                                      ? null
+                                      : () => m.buy(StoreProduct.removeAds),
+                                ),
+                              if (m.adsRemoved && !m.isSupporter)
+                                ListRow(
+                                  leading: IconTile(
+                                      icon: CupertinoIcons.checkmark_seal_fill, color: p.accent),
+                                  title: s.adsRemovedTitle,
+                                  subtitle: s.adsRemovedDesc,
+                                ),
+                              if (!m.isSupporter)
                                 ListRow(
                                   leading: IconTile(
                                       icon: CupertinoIcons.arrow_counterclockwise,
@@ -342,6 +357,17 @@ class BlocklistScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// "One-time purchase · Rp 49.000 · …", or the pending / error line for
+  /// the product being bought.
+  static String _purchaseLine(
+      S s, Monetization m, StoreProduct product, String Function(String?) desc) {
+    if (m.activeProduct == product) {
+      if (m.purchaseState == PurchaseState.pending) return s.purchasePending;
+      if (m.purchaseState == PurchaseState.error) return s.purchaseFailed;
+    }
+    return desc(m.priceOf(product));
   }
 
   static Widget _pad(Widget child) => Padding(

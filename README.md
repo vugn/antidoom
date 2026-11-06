@@ -181,16 +181,23 @@ One codebase, two builds. Every `flutter run` / `flutter build` needs `--flavor`
 | :--- | :--- | :--- |
 | Ships on | GitHub Releases (and F-Droid later) | Google Play |
 | Ads | None | One AdMob banner at the bottom of the dashboard, never in the counter or a check-in |
-| Purchases | None | One-time "Remove ads" (`remove_ads`, non-consumable) |
+| Purchases | None | One-time "Remove ads" (`remove_ads`) or "Supporter" (`supporter`, includes no ads); both non-consumable |
 | Internet permission | None (stripped in `android/app/src/foss/AndroidManifest.xml`) | Yes, for ads and billing |
 
 Contributors only need `foss`; no AdMob or Play Console account is involved. The code lives behind
 `lib/services/monetization/` (`NoopMonetization` for foss, `PlayMonetization` for play).
 
-The `play` flavor uses Google's public **test** ad IDs unless real ones are supplied:
-`android/admob.properties` (gitignored) with `admobAppId=ca-app-pub-…~…`, and
-`--dart-define=ADMOB_BANNER_ID=ca-app-pub-…/…` at build time. The `Play bundle` workflow reads both
-from the `ADMOB_APP_ID` and `ADMOB_BANNER_ID` repository secrets and refuses to build without them.
+The `play` flavor uses Google's public **test** ad IDs unless real ones are in
+`android/admob.properties` (gitignored):
+
+```properties
+admobAppId=ca-app-pub-…~…
+admobBannerId=ca-app-pub-…/…
+```
+
+With that file in place, `flutter build appbundle --flavor play --release` uses the real IDs; no
+extra flags. The `Play bundle` workflow writes the same file from the `ADMOB_APP_ID` and
+`ADMOB_BANNER_ID` repository secrets and refuses to build without them.
 
 ---
 

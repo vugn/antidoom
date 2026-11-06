@@ -165,6 +165,12 @@ class MainActivity : FlutterActivity() {
                         result.success(status)
                     }
 
+                    "admobBannerId" -> {
+                        // Only the play flavor defines this (build.gradle.kts resValue).
+                        val id = resources.getIdentifier("admob_banner_id", "string", packageName)
+                        result.success(if (id != 0) getString(id) else null)
+                    }
+
                     "openOemPermission" -> {
                         val kind = call.argument<String>("kind") ?: ""
                         result.success(OemPermissions.open(this@MainActivity, kind))

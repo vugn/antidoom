@@ -375,11 +375,27 @@ class DashboardScreen extends ConsumerWidget {
               left: 0,
               right: 0,
               child: FloatingTopBar(
-                title: const Padding(
-                  padding: EdgeInsets.only(left: 8),
+                title: Padding(
+                  padding: const EdgeInsets.only(left: 8),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: BrandWordmark(height: 21),
+                    child: ListenableBuilder(
+                      listenable: monetization,
+                      builder: (context, _) => Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const BrandWordmark(height: 21),
+                          // Supporter mark: the one thing the purchase adds besides no ads.
+                          if (monetization.isSupporter) ...[
+                            const SizedBox(width: 8),
+                            Tooltip(
+                              message: s.supporterBadge,
+                              child: Icon(CupertinoIcons.heart_fill, color: p.danger, size: 18),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
                 actions: [

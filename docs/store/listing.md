@@ -53,8 +53,8 @@ PRIVATE BY DESIGN
 WHY ACCESSIBILITY ACCESS
 AntiDoom uses Android's Accessibility Service to notice when you are in a short-video feed, to tell one video from the next, and to draw the counter and the check-in screen over the feed. It is not used for anything else, and you can turn it off at any time in Settings.
 
-ADS AND THE ONE PURCHASE
-This version is free and shows one small ad at the bottom of the dashboard. Ads never appear in the counter or in a check-in. A one-time "Remove ads" purchase takes them away for good. Ads are served by Google AdMob, which never sees what AntiDoom counts.
+ADS AND SUPPORT
+This version is free and shows one small ad at the bottom of the dashboard. Ads never appear in the counter or in a check-in. Two optional one-time purchases: "Remove ads", or "Become a supporter", which also removes the ads and helps keep AntiDoom going. Every feature stays free either way. Ads are served by Google AdMob, which never sees what AntiDoom counts.
 
 OPEN SOURCE
 AntiDoom is free software under the GNU GPL v3. The code is public on GitHub, where you can also find an ad-free build. English and Bahasa Indonesia.
@@ -101,8 +101,8 @@ PRIVAT SEJAK AWAL
 KENAPA BUTUH AKSES AKSESIBILITAS
 AntiDoom memakai Layanan Aksesibilitas Android untuk mengetahui saat kamu berada di feed video pendek, membedakan satu video dengan berikutnya, dan menampilkan counter serta layar check-in di atas feed. Akses ini tidak dipakai untuk hal lain, dan bisa kamu matikan kapan saja di Pengaturan.
 
-IKLAN DAN SATU PEMBELIAN
-Versi ini gratis dan menampilkan satu iklan kecil di bagian bawah dashboard. Iklan tidak pernah muncul di counter atau saat check-in. Pembelian sekali bayar "Hapus iklan" menghilangkannya selamanya. Iklan disediakan oleh Google AdMob, yang tidak pernah melihat apa yang dihitung AntiDoom.
+IKLAN DAN DUKUNGAN
+Versi ini gratis dan menampilkan satu iklan kecil di bagian bawah dashboard. Iklan tidak pernah muncul di counter atau saat check-in. Ada dua pembelian sekali bayar yang opsional: "Hapus iklan", atau "Jadi supporter" yang juga menghapus iklan dan membantu AntiDoom terus berjalan. Semua fitur tetap gratis. Iklan disediakan oleh Google AdMob, yang tidak pernah melihat apa yang dihitung AntiDoom.
 
 OPEN SOURCE
 AntiDoom adalah perangkat lunak bebas berlisensi GNU GPL v3. Kodenya publik di GitHub, termasuk versi tanpa iklan. Tersedia dalam Bahasa Indonesia dan Inggris.
@@ -128,5 +128,7 @@ These are separate from the listing but block review if they're missing:
 4. **Ads**: answer "Yes, my app contains ads".
 5. **Content rating** questionnaire and **target audience** (13+ fits a social-media
    companion app).
-6. **In-app product**: create `remove_ads` (one-time, non-consumable) and activate it.
+6. **In-app products** (one-time, non-consumable), then activate both:
+   - `remove_ads`: "Remove ads"
+   - `supporter`: "AntiDoom Supporter" (includes removing ads)
 7. **Privacy policy URL**: `https://antidoom.app/privacy/`.

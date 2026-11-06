@@ -48,20 +48,17 @@ jobs:
           keyPassword=$KEY_PASSWORD
           keyAlias=$KEY_ALIAS
           EOF
-          echo "admobAppId=$ADMOB_APP_ID" > android/admob.properties
+          printf 'admobAppId=%s\nadmobBannerId=%s\n' "$ADMOB_APP_ID" "$ADMOB_BANNER_ID" > android/admob.properties
 
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
 
       - name: Build the app bundle
-        env:
-          ADMOB_BANNER_ID: ${{ secrets.ADMOB_BANNER_ID }}
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then VERSION="${GITHUB_REF_NAME#v}"; else VERSION="$(grep '^version:' pubspec.yaml | sed 's/version: //; s/+.*//')"; fi
           flutter build appbundle --release --flavor play \
-            --build-name="$VERSION" --build-number=${{ github.run_number }} \
-            --dart-define=ADMOB_BANNER_ID="$ADMOB_BANNER_ID"
+            --build-name="$VERSION" --build-number=${{ github.run_number }}
 
       - uses: actions/upload-artifact@v4
         with:

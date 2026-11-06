@@ -62,8 +62,10 @@ android {
         }
         create("play") {
             dimension = "distribution"
-            // AdMob app ID from android/admob.properties (gitignored) or the
-            // ADMOB_APP_ID env var in CI; falls back to Google's public test ID.
+            // AdMob IDs from android/admob.properties (gitignored):
+            //   admobAppId=ca-app-pub-...~...     admobBannerId=ca-app-pub-.../...
+            // or the ADMOB_APP_ID / ADMOB_BANNER_ID env vars in CI. Without them,
+            // Google's public test IDs are used, so dev builds never show live ads.
             val admobProperties = Properties()
             val admobFile = rootProject.file("admob.properties")
             if (admobFile.exists()) admobFile.inputStream().use { admobProperties.load(it) }
@@ -71,6 +73,14 @@ android {
                 (admobProperties["admobAppId"] as String?)
                     ?: System.getenv("ADMOB_APP_ID")
                     ?: "ca-app-pub-3940256099942544~3347511713"
+            // Read by the app at runtime (MainActivity "admobBannerId").
+            resValue(
+                "string",
+                "admob_banner_id",
+                (admobProperties["admobBannerId"] as String?)
+                    ?: System.getenv("ADMOB_BANNER_ID")
+                    ?: "ca-app-pub-3940256099942544/6300978111",
+            )
         }
     }
 
