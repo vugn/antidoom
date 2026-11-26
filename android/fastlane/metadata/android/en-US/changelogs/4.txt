@@ -1,0 +1,1 @@
+• Fixed the counter going up on its own when auto captions are on in Instagram and Facebook Reels.

@@ -3,9 +3,10 @@
 
     release_notes.py --version 1.0.2 --code 4 [--to v1.0.2]
 
-Input is the git history between the previous version tag and --to. Claude turns it into short,
-user-facing notes. Without ANTHROPIC_API_KEY, or if the call fails or is refused, the notes are
-the feat:/fix: commit subjects, in English only, and the job summary says so.
+If android/fastlane/metadata/android/{en-US,id}/changelogs/<code>.txt are committed, they are used as
+written. Otherwise the git history between the previous version tag and --to goes to Claude, which
+writes short user-facing notes. Without ANTHROPIC_API_KEY, or if the call fails or is refused, the
+notes are the feat:/fix: commit subjects, in English only, and the job summary says so.
 
 Output: android/fastlane/metadata/android/{en-US,id}/changelogs/<code>.txt (fastlane supply reads
 these when it uploads the bundle). Play allows at most 500 characters per language.
@@ -114,21 +115,25 @@ def main():
     a = ap.parse_args()
 
     prev, raw = commits(a.version, a.to)
-    source = "Claude"
-    try:
-        if not os.environ.get("ANTHROPIC_API_KEY"):
-            raise RuntimeError("ANTHROPIC_API_KEY is not set")
-        en, idn = ask_claude(a.version, raw)
-    except Exception as e:  # any failure must not block a release
-        print(f"::warning::Release notes: falling back to commit subjects ({e})", file=sys.stderr)
-        en = fit(subjects(raw))
-        idn = en
-        source = "commit subjects (English only)"
-
-    for locale, text in (("en-US", en), ("id", idn)):
-        d = META / locale / "changelogs"
-        d.mkdir(parents=True, exist_ok=True)
-        (d / f"{a.code}.txt").write_text(text + "\n", encoding="utf-8")
+    files = {loc: META / loc / "changelogs" / f"{a.code}.txt" for loc in ("en-US", "id")}
+    if all(f.exists() for f in files.values()):
+        # Notes committed for this build win: they were written and reviewed by a person.
+        en, idn = (fit(files[loc].read_text(encoding="utf-8")) for loc in ("en-US", "id"))
+        source = "committed files"
+    else:
+        source = "Claude"
+        try:
+            if not os.environ.get("ANTHROPIC_API_KEY"):
+                raise RuntimeError("ANTHROPIC_API_KEY is not set")
+            en, idn = ask_claude(a.version, raw)
+        except Exception as e:  # any failure must not block a release
+            print(f"::warning::Release notes: falling back to commit subjects ({e})", file=sys.stderr)
+            en = fit(subjects(raw))
+            idn = en
+            source = "commit subjects (English only)"
+        for loc, text in (("en-US", en), ("id", idn)):
+            files[loc].parent.mkdir(parents=True, exist_ok=True)
+            files[loc].write_text(text + "\n", encoding="utf-8")
 
     summary = (
         f"### Release notes for {a.version} (build {a.code})\n"

@@ -16,8 +16,7 @@ key.properties
 # AdMob app ID for the play flavor (see android/app/build.gradle.kts)
 admob.properties
 
-# fastlane: generated release notes, reports and installed gems
-fastlane/metadata/
+# fastlane: reports and installed gems (release notes in fastlane/metadata/ are committed)
 fastlane/report.xml
 fastlane/README.md
 vendor/

@@ -19,11 +19,14 @@ Play Console).
 
 ## Release notes
 
-`.github/scripts/release_notes.py` reads the commits since the previous `vX.Y.Z` tag and asks Claude
-for short user-facing notes in both languages (500 characters each, Play's limit). They are shown in
-the run summary before you approve. Write commit subjects as `feat:` / `fix:` lines a user would
-understand. Without `ANTHROPIC_API_KEY`, or if the call fails, the notes are the `feat:`/`fix:`
-subjects in English.
+Play allows 500 characters per language. Before tagging, put the notes in
+`android/fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` and `.../id/changelogs/<versionCode>.txt`
+(ask Claude Code: "write the release notes for this version"; it reads the commits and writes both).
+Commit them; the workflow uses them as written and shows them in the run summary before you approve.
+
+If those files are missing, `.github/scripts/release_notes.py` writes them: with `ANTHROPIC_API_KEY` set,
+Claude turns the commits since the previous `vX.Y.Z` tag into notes in both languages; without it, the
+notes are the `feat:` / `fix:` commit subjects in English only.
 
 ## One-time setup
 
