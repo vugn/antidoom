@@ -1,0 +1,3 @@
+package_name("com.antidoom")
+# Service account key for the Google Play Developer API (a file path; CI writes it from a secret).
+json_key_file(ENV["PLAY_JSON_KEY_FILE"]) if ENV["PLAY_JSON_KEY_FILE"]

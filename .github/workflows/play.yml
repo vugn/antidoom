@@ -1,21 +1,30 @@
-name: Play bundle
+name: Play release
 
-# Builds the Google Play app bundle (play flavor: AdMob banner + "Remove ads").
-# Runs on version tags next to the GitHub release, or by hand from the Actions tab.
-# The .aab is attached to the run as an artifact; upload it in Play Console.
+# Version tag (or a manual run) -> build the play bundle -> upload it to the INTERNAL testing track with
+# generated release notes (English + Indonesian). The production job then waits for your approval
+# (Environment "production", required reviewer) and promotes that same release as a staged rollout.
+#
+# Secrets: KEYSTORE_*, ADMOB_*, PLAY_SERVICE_ACCOUNT_JSON (Google Play API key), and optionally
+# ANTHROPIC_API_KEY (without it the notes are the commit subjects).
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      rollout:
+        description: "Production rollout fraction (0.2 = 20%, 1 = everyone)"
+        default: "0.2"
 
 permissions:
   contents: read
 
 jobs:
-  bundle:
+  internal:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags and history, for the release notes
 
       - uses: actions/setup-java@v4
         with:
@@ -28,7 +37,7 @@ jobs:
           flutter-version: 3.47.9
           cache: true
 
-      - name: Restore the signing key and AdMob IDs
+      - name: Restore the signing key, AdMob IDs and Play API key
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -36,9 +45,10 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
           ADMOB_BANNER_ID: ${{ secrets.ADMOB_BANNER_ID }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           # Refuse to build a store bundle with a debug key or Google's test ad IDs.
-          for v in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_PASSWORD KEY_ALIAS ADMOB_APP_ID ADMOB_BANNER_ID; do
+          for v in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_PASSWORD KEY_ALIAS ADMOB_APP_ID ADMOB_BANNER_ID PLAY_SERVICE_ACCOUNT_JSON; do
             [ -n "${!v}" ] || { echo "::error::Secret $v is not set"; exit 1; }
           done
           echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
@@ -49,6 +59,7 @@ jobs:
           keyAlias=$KEY_ALIAS
           EOF
           printf 'admobAppId=%s\nadmobBannerId=%s\n' "$ADMOB_APP_ID" "$ADMOB_BANNER_ID" > android/admob.properties
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/play.json"
 
       - run: flutter pub get
       - run: flutter analyze
@@ -60,6 +71,8 @@ jobs:
           # accepts a number higher than the last upload, so bump it with every release.
           VERSION="$(grep '^version:' pubspec.yaml | sed 's/version: //; s/+.*//')"
           BUILD="$(grep '^version:' pubspec.yaml | sed 's/.*+//')"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
           flutter build appbundle --release --flavor play \
             --build-name="$VERSION" --build-number="$BUILD"
 
@@ -68,6 +81,54 @@ jobs:
           name: antidoom-play-aab
           path: build/app/outputs/bundle/playRelease/app-play-release.aab
 
-      - name: Remove the signing key
+      - name: Write the release notes (EN + ID)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          pip install --quiet anthropic
+          # On a tag run, compare up to that tag; a manual run uses the tag of this version if it exists.
+          TO=HEAD; git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null && TO="v$VERSION"
+          python3 .github/scripts/release_notes.py --version "$VERSION" --code "$BUILD" --to "$TO"
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: android
+
+      - name: Upload to the internal testing track
+        working-directory: android
+        env:
+          PLAY_JSON_KEY_FILE: ${{ runner.temp }}/play.json
+        run: bundle exec fastlane internal
+
+      - name: Remove the secrets
         if: always()
-        run: rm -f "$RUNNER_TEMP/upload.jks" android/key.properties android/admob.properties
+        run: rm -f "$RUNNER_TEMP/upload.jks" "$RUNNER_TEMP/play.json" android/key.properties android/admob.properties
+
+  production:
+    needs: internal
+    runs-on: ubuntu-latest
+    # Pauses here until a required reviewer approves (repo Settings -> Environments -> production).
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: android
+
+      - name: Promote internal -> production
+        working-directory: android
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          ROLLOUT: ${{ inputs.rollout || '0.2' }}
+        run: |
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/play.json"
+          PLAY_JSON_KEY_FILE="$RUNNER_TEMP/play.json" bundle exec fastlane promote
+
+      - name: Remove the secrets
+        if: always()
+        run: rm -f "$RUNNER_TEMP/play.json"

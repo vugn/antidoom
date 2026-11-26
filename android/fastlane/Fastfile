@@ -1,0 +1,35 @@
+default_platform(:android)
+
+AAB = File.expand_path("../../build/app/outputs/bundle/playRelease/app-play-release.aab", __dir__)
+
+platform :android do
+  desc "Upload the play-flavor bundle to the internal testing track. The 'What's new' text is read " \
+       "from metadata/android/<locale>/changelogs/<versionCode>.txt (written by release_notes.py)."
+  lane :internal do
+    upload_to_play_store(
+      track: "internal",
+      aab: AAB,
+      release_status: "completed",
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Promote the latest internal release to production, as a staged rollout (ROLLOUT, default 0.2)."
+  lane :promote do
+    rollout = Float(ENV.fetch("ROLLOUT", "0.2"))
+    upload_to_play_store(
+      track: "internal",
+      track_promote_to: "production",
+      rollout: rollout.to_s,
+      track_promote_release_status: rollout < 1 ? "inProgress" : "completed",
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+end
