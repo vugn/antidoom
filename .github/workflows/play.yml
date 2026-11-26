@@ -56,9 +56,12 @@ jobs:
 
       - name: Build the app bundle
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then VERSION="${GITHUB_REF_NAME#v}"; else VERSION="$(grep '^version:' pubspec.yaml | sed 's/version: //; s/+.*//')"; fi
+          # versionCode comes from pubspec.yaml (+N), never the run number: Play only
+          # accepts a number higher than the last upload, so bump it with every release.
+          VERSION="$(grep '^version:' pubspec.yaml | sed 's/version: //; s/+.*//')"
+          BUILD="$(grep '^version:' pubspec.yaml | sed 's/.*+//')"
           flutter build appbundle --release --flavor play \
-            --build-name="$VERSION" --build-number=${{ github.run_number }}
+            --build-name="$VERSION" --build-number="$BUILD"
 
       - uses: actions/upload-artifact@v4
         with:

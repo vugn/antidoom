@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -25,7 +26,9 @@ class PlayMonetization extends Monetization with WidgetsBindingObserver {
 
   /// Banner unit: `admobBannerId` in android/admob.properties (read through
   /// the native side), or `--dart-define=ADMOB_BANNER_ID=...` to override.
-  /// Without either, Google's public test banner is used.
+  /// Without either, Google's public test banner is used. Debug builds always
+  /// use the test banner: clicking your own live ads can get an AdMob account
+  /// suspended.
   static const _testBannerId = 'ca-app-pub-3940256099942544/6300978111';
   static const _definedBannerId = String.fromEnvironment('ADMOB_BANNER_ID');
   String _bannerUnitId = _testBannerId;
@@ -58,9 +61,11 @@ class PlayMonetization extends Monetization with WidgetsBindingObserver {
 
   @override
   Future<void> init() async {
-    _bannerUnitId = _definedBannerId.isNotEmpty
-        ? _definedBannerId
-        : (await NativeBridge.getAdmobBannerId()) ?? _testBannerId;
+    _bannerUnitId = kDebugMode
+        ? _testBannerId
+        : _definedBannerId.isNotEmpty
+            ? _definedBannerId
+            : (await NativeBridge.getAdmobBannerId()) ?? _testBannerId;
     final prefs = await SharedPreferences.getInstance();
     _adsRemoved = prefs.getBool(_prefsAdsRemoved) ?? false;
     _supporter = prefs.getBool(_prefsSupporter) ?? false;

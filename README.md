@@ -16,6 +16,14 @@
   <img src="https://img.shields.io/badge/state-Riverpod-blueviolet.svg" alt="State Management">
 </p>
 
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=com.antidoom"><b>Get it on Google Play</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/vugn/antidoom/releases/latest"><b>Download the APK</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://antidoom.app"><b>antidoom.app</b></a>
+</p>
+
 ---
 
 ## 🌟 About AntiDoom
@@ -179,10 +187,12 @@ One codebase, two builds. Every `flutter run` / `flutter build` needs `--flavor`
 
 | | `foss` | `play` |
 | :--- | :--- | :--- |
-| Ships on | GitHub Releases (and F-Droid later) | Google Play |
+| Ships on | [GitHub Releases](https://github.com/vugn/antidoom/releases/latest) (and F-Droid later) | [Google Play](https://play.google.com/store/apps/details?id=com.antidoom) |
 | Ads | None | One AdMob banner at the bottom of the dashboard, never in the counter or a check-in |
 | Purchases | None | One-time "Remove ads" (`remove_ads`) or "Supporter" (`supporter`, includes no ads); both non-consumable |
 | Internet permission | None (stripped in `android/app/src/foss/AndroidManifest.xml`) | Yes, for ads and billing |
+
+> The two builds are signed with different keys, so Android can't update one into the other. To switch, uninstall first.
 
 Contributors only need `foss`; no AdMob or Play Console account is involved. The code lives behind
 `lib/services/monetization/` (`NoopMonetization` for foss, `PlayMonetization` for play).
