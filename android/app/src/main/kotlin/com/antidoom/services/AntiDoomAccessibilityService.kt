@@ -122,6 +122,11 @@ class AntiDoomAccessibilityService : AccessibilityService() {
     private var observedSince = 0L
     /** Last video we counted, plus a short history to ignore revisits. */
     private var lastCountedKey: String? = null
+    /** When [lastCountedKey] was counted in this process (0 = none yet). */
+    private var lastCountedAt = 0L
+    /** Last real vertical swipe seen in a feed we fingerprint. A new video
+     *  needs one; live captions rewriting the text do not produce it. */
+    private var lastFeedScrollAt = 0L
     private val recentKeys = ArrayDeque<String>()
     /** Set once the detector produced a fingerprint in this app; until then
      *  the old scroll-gesture counting is used as a fallback. */
@@ -185,6 +190,8 @@ class AntiDoomAccessibilityService : AccessibilityService() {
         gestureCounted = false
         observedKey = null
         observedSince = 0L
+        lastCountedAt = 0L
+        lastFeedScrollAt = 0L
     }
 
     private fun fingerprintActive(pkg: String) =
@@ -266,12 +273,22 @@ class AntiDoomAccessibilityService : AccessibilityService() {
             lastCountedKey = key // same video, text just finished loading
             return
         }
+        if (last != null && lastCountedAt != 0L && lastFeedScrollAt <= lastCountedAt &&
+            ReelDetector.sharesPart(last, key)
+        ) {
+            // Same creator, text changed, and no swipe since we counted: live /
+            // auto captions rewriting the text of the video that is still playing.
+            lastCountedKey = key
+            if (isDebuggable) Log.d(TAG, "caption churn, not counted: ${reel.label}")
+            return
+        }
         if (recentKeys.any { ReelDetector.sameReel(it, key) }) {
             lastCountedKey = key // scrolled back to a video we already counted
             if (isDebuggable) Log.d(TAG, "revisit, not counted: ${reel.label}")
             return
         }
         lastCountedKey = key
+        lastCountedAt = now
         recentKeys.addLast(key)
         while (recentKeys.size > RECENT_KEYS) recentKeys.removeFirst()
         TrackerPrefs.saveRecentReels(applicationContext, recentKeys)
@@ -500,6 +517,7 @@ class AntiDoomAccessibilityService : AccessibilityService() {
                 fingerprintPkgs.add(packageName)
             }
             if (fingerprintActive(packageName)) {
+                if (!isHorizontalScroll(event)) lastFeedScrollAt = now
                 requestScan(pkg = packageName)
                 return
             }
@@ -511,21 +529,9 @@ class AntiDoomAccessibilityService : AccessibilityService() {
             return
         }
 
-        // 5. Direction validation: Short-form video feeds are strictly VERTICAL
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && event != null) {
-            val dx = Math.abs(event.scrollDeltaX)
-            val dy = Math.abs(event.scrollDeltaY)
-
-            // NOTE: do NOT filter zero-delta (dx == 0 && dy == 0) events here!
-            // Some feed pagers (e.g. YouTube Shorts' reel_player_page_view) emit
-            // TYPE_VIEW_SCROLLED with scrollDeltaX/Y == 0 - filtering them stops
-            // all counting on YouTube Shorts.
-
-            // Horizontal swipe (switching tabs, audio carousels, chips) -> ignore!
-            if (dx > 40 && dx > dy * 2) {
-                return
-            }
-        }
+        // 5. Direction validation: Short-form video feeds are strictly VERTICAL.
+        // Horizontal swipe (switching tabs, audio carousels, chips) -> ignore!
+        if (isHorizontalScroll(event)) return
 
         // 6. Gesture coalescing: one physical swipe is one continuous burst of scroll
         // events (drag frames, release, fling inertia, snap) all less than
@@ -542,6 +548,18 @@ class AntiDoomAccessibilityService : AccessibilityService() {
         }
         gestureCounted = true
         countReel(packageName, now)
+    }
+
+    /**
+     * NOTE: zero-delta (dx == 0 && dy == 0) events are NOT horizontal. Some feed
+     * pagers (e.g. YouTube Shorts' reel_player_page_view) emit TYPE_VIEW_SCROLLED
+     * with scrollDeltaX/Y == 0, and filtering them stops all counting there.
+     */
+    private fun isHorizontalScroll(event: AccessibilityEvent?): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P || event == null) return false
+        val dx = Math.abs(event.scrollDeltaX)
+        val dy = Math.abs(event.scrollDeltaY)
+        return dx > 40 && dx > dy * 2
     }
 
     /** Records one video/swipe and shows the counter, check-in or block. */

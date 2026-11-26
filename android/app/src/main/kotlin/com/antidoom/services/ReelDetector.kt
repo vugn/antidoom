@@ -333,4 +333,13 @@ object ReelDetector {
         val pb = b.split('|').toSet()
         return pa.containsAll(pb) || pb.containsAll(pa)
     }
+
+    /**
+     * True when two fingerprints have a component in common (same creator).
+     * Burned-in or live captions rewrite the on-screen text every second or
+     * two while the SAME video plays: the creator stays, the caption part
+     * keeps changing, and [sameReel] alone calls each phrase a new video.
+     */
+    fun sharesPart(a: String, b: String): Boolean =
+        a.split('|').toSet().intersect(b.split('|').toSet()).isNotEmpty()
 }
